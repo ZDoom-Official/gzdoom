@@ -23,10 +23,27 @@
 
 #include "alext.h"
 
+#ifndef AL_SOFT_UHJ
+#define AL_SOFT_UHJ
+#define AL_FORMAT_UHJ2CHN8_SOFT                  0x19A2
+#define AL_FORMAT_UHJ2CHN16_SOFT                 0x19A3
+#define AL_FORMAT_UHJ2CHN_FLOAT32_SOFT           0x19A4
+#define AL_FORMAT_UHJ3CHN8_SOFT                  0x19A5
+#define AL_FORMAT_UHJ3CHN16_SOFT                 0x19A6
+#define AL_FORMAT_UHJ3CHN_FLOAT32_SOFT           0x19A7
+#define AL_FORMAT_UHJ4CHN8_SOFT                  0x19A8
+#define AL_FORMAT_UHJ4CHN16_SOFT                 0x19A9
+#define AL_FORMAT_UHJ4CHN_FLOAT32_SOFT           0x19AA
+#define AL_STEREO_MODE_SOFT                      0x19B0
+#define AL_NORMAL_SOFT                           0x0000
+#define AL_SUPER_STEREO_SOFT                     0x0001
+#define AL_SUPER_STEREO_WIDTH_SOFT               0x19B1
+#endif
+
 
 class OpenALSoundStream;
 
-class OpenALSoundRenderer : public SoundRenderer
+class OpenALSoundRenderer final : public SoundRenderer
 {
 public:
 	OpenALSoundRenderer();
@@ -34,6 +51,7 @@ public:
 
 	virtual void SetSfxVolume(float volume);
 	virtual void SetMusicVolume(float volume);
+	virtual void UpdateMusicParams();
 	virtual SoundHandle LoadSound(uint8_t *sfxdata, int length);
 	virtual SoundHandle LoadSoundRaw(uint8_t *sfxdata, int length, int frequency, int channels, int bits, int loopstart, int loopend = -1);
 	virtual void UnloadSound(SoundHandle sfx);
@@ -86,20 +104,21 @@ public:
 
 private:
     struct {
-        bool EXT_EFX;
-        bool EXT_disconnect;
-        bool SOFT_HRTF;
-        bool SOFT_pause_device;
-		bool SOFT_output_limiter;
+        bool EXT_EFX : 1;
+        bool EXT_disconnect : 1;
+        bool SOFT_HRTF : 1;
+        bool SOFT_pause_device : 1;
+        bool SOFT_output_limiter : 1;
     } ALC;
     struct {
-        bool EXT_source_distance_model;
-        bool EXT_SOURCE_RADIUS;
-        bool SOFT_deferred_updates;
-        bool SOFT_loop_points;
-        bool SOFT_source_latency;
-        bool SOFT_source_resampler;
-        bool SOFT_source_spatialize;
+        bool EXT_source_distance_model : 1;
+        bool EXT_SOURCE_RADIUS : 1;
+        bool SOFT_deferred_updates : 1;
+        bool SOFT_loop_points : 1;
+        bool SOFT_source_latency : 1;
+        bool SOFT_source_resampler : 1;
+        bool SOFT_source_spatialize : 1;
+        bool SOFT_UHJ : 1;
     } AL;
 
 	// EFX Extension function pointer variables. Loaded after context creation

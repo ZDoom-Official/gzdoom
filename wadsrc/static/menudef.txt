@@ -1906,12 +1906,22 @@ OptionString Resamplers
 }
 
 
+OptionValue MusicModes
+{
+	0,	"$OPTVAL_NORMAL"
+	1,	"$OPTVAL_SUPERSTEREO"
+}
+
+
 OptionMenu OpenALSoundItems protected
 {
 	Title "$OPENALMNU_TITLE"
 	Option "$OPENALMNU_PLAYBACKDEVICE",		"snd_aldevice",		"ALDevices"
 	Option "$OPENALMNU_ENABLEEFX",			"snd_efx",			"OnOff"
 	Option "$OPENALMNU_RESAMPLER",			"snd_alresampler",	"ALResamplers"
+	StaticText " "
+	Option "$OPENALMNU_MUSICMODE",			"snd_musicmode",	"MusicModes"
+	Slider "$OPENALMNU_SUPERSTEREOWIDTH",	"snd_superstereowidth", 0, 1, 0.05, 2
 }
 
 
