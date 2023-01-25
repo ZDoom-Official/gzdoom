@@ -138,6 +138,26 @@ static constexpr uint8_t ChannelCount(ChannelConfig chans)
     return 0;
 }
 
+static constexpr ALenum GetFormat(SampleType stype, ChannelConfig chans)
+{
+	if(stype == SampleType_UInt8)
+	{
+		if(chans == ChannelConfig_Mono) return AL_FORMAT_MONO8;
+		if(chans == ChannelConfig_Stereo) return AL_FORMAT_STEREO8;
+	}
+	if(stype == SampleType_Int16)
+	{
+		if(chans == ChannelConfig_Mono) return AL_FORMAT_MONO16;
+		if(chans == ChannelConfig_Stereo) return AL_FORMAT_STEREO16;
+	}
+	if(stype == SampleType_Float32)
+	{
+		if(chans == ChannelConfig_Mono) return AL_FORMAT_MONO_FLOAT32;
+		if(chans == ChannelConfig_Stereo) return AL_FORMAT_STEREO_FLOAT32;
+	}
+	return AL_NONE;
+}
+
 static ALenum checkALError(const char *fn, unsigned int ln)
 {
 	ALenum err = alGetError();
@@ -491,23 +511,7 @@ public:
 		UserData = userdata;
 		SampleRate = samplerate;
 
-		Format = AL_NONE;
-		if(stype == SampleType_UInt8)
-		{
-			if(chans == ChannelConfig_Mono) Format = AL_FORMAT_MONO8;
-			else if(chans == ChannelConfig_Stereo) Format = AL_FORMAT_STEREO8;
-        }
-		else if(stype == SampleType_Int16)
-		{
-			if(chans == ChannelConfig_Mono) Format = AL_FORMAT_MONO16;
-			else if(chans == ChannelConfig_Stereo) Format = AL_FORMAT_STEREO16;
-		}
-		else if(stype == SampleType_Float32 && alIsExtensionPresent("AL_EXT_FLOAT32"))
-		{
-			if(chans == ChannelConfig_Mono) Format = AL_FORMAT_MONO_FLOAT32;
-			else if(chans == ChannelConfig_Stereo) Format = AL_FORMAT_STEREO_FLOAT32;
-		}
-
+		Format = GetFormat(stype, chans);
 		if(Format == AL_NONE)
 		{
 			Printf("Unhandled audio format: %s, %s\n", GetChannelConfigName(chans),
@@ -530,16 +534,6 @@ public:
 #define AREA_SOUND_RADIUS  (32.f)
 
 #define PITCH_MULT (0.7937005f) /* Approx. 4 semitones lower; what Nash suggested */
-
-static size_t GetChannelCount(ChannelConfig chans)
-{
-	switch(chans)
-	{
-		case ChannelConfig_Mono: return 1;
-		case ChannelConfig_Stereo: return 2;
-	}
-	return 0;
-}
 
 static float GetRolloff(const FRolloffInfo *rolloff, float distance)
 {
@@ -1104,10 +1098,6 @@ SoundHandle OpenALSoundRenderer::LoadSoundRaw(uint8_t *sfxdata, int length, int 
 SoundHandle OpenALSoundRenderer::LoadSound(uint8_t *sfxdata, int length)
 {
 	SoundHandle retval = { NULL };
-	ALenum format = AL_NONE;
-	ChannelConfig chans;
-	SampleType type;
-	int srate;
 	uint32_t loop_start = 0, loop_end = ~0u;
 	zmusic_bool startass = false, endass = false;
 
@@ -1116,19 +1106,12 @@ SoundHandle OpenALSoundRenderer::LoadSound(uint8_t *sfxdata, int length)
 	if (!decoder)
 		return retval;
 
+	ChannelConfig chans;
+	SampleType type;
+	int srate;
 	SoundDecoder_GetInfo(decoder, &srate, &chans, &type);
-	int samplesize = 1;
-	if (chans == ChannelConfig_Mono)
-	{
-		if (type == SampleType_UInt8) format = AL_FORMAT_MONO8, samplesize = 1;
-		if (type == SampleType_Int16) format = AL_FORMAT_MONO16, samplesize = 2;
-	}
-	else if (chans == ChannelConfig_Stereo)
-	{
-		if (type == SampleType_UInt8) format = AL_FORMAT_STEREO8, samplesize = 2;
-		if (type == SampleType_Int16) format = AL_FORMAT_STEREO16, samplesize = 4;
-	}
 
+	ALenum format = GetFormat(type, chans);
 	if (format == AL_NONE)
 	{
 		SoundDecoder_Close(decoder);
@@ -1136,6 +1119,7 @@ SoundHandle OpenALSoundRenderer::LoadSound(uint8_t *sfxdata, int length)
 			GetSampleTypeName(type));
 		return retval;
 	}
+	int samplesize = SampleTypeSize(type) * ChannelCount(chans);
 
 	std::vector<uint8_t> data;
 	unsigned total = 0;
