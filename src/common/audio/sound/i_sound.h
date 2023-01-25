@@ -65,17 +65,6 @@ class SoundStream
 public:
 	virtual ~SoundStream() = default;
 
-	enum
-	{	// For CreateStream
-		Mono = 1,
-		Bits8 = 2,
-		Bits32 = 4,
-		Float = 8,
-
-		// For OpenStream
-		Loop = 16
-	};
-
 	struct Position {
 		uint64_t samplesplayed;
 		std::chrono::nanoseconds latency;
@@ -114,7 +103,7 @@ public:
 	virtual float GetOutputRate() = 0;
 
 	// Streaming sounds.
-	virtual SoundStream *CreateStream (SoundStreamCallback callback, int buffbytes, int flags, int samplerate, void *userdata) = 0;
+	virtual SoundStream *CreateStream (SoundStreamCallback callback, int buffbytes, SampleType stype, ChannelConfig chans, int samplerate, void *userdata) = 0;
 
 	// Starts a sound.
 	virtual FISoundChannel *StartSound (SoundHandle sfx, float vol, float pitch, int chanflags, FISoundChannel *reuse_chan, float startTime = 0.f) = 0;

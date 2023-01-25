@@ -117,6 +117,27 @@ EXTERN_CVAR (Int, snd_hrtf)
 #define GET_PTRID(x)  ((uint32_t)(uintptr_t)(x))
 
 
+static constexpr uint8_t SampleTypeSize(SampleType stype)
+{
+    switch(stype)
+    {
+    case SampleType_UInt8: return sizeof(uint8_t);
+    case SampleType_Int16: return sizeof(int16_t);
+    case SampleType_Float32: return sizeof(float);
+    }
+    return 0;
+}
+
+static constexpr uint8_t ChannelCount(ChannelConfig chans)
+{
+    switch(chans)
+    {
+    case ChannelConfig_Mono: return 1;
+    case ChannelConfig_Stereo: return 2;
+    }
+    return 0;
+}
+
 static ALenum checkALError(const char *fn, unsigned int ln)
 {
 	ALenum err = alGetError();
@@ -461,7 +482,7 @@ public:
 		return ok;
 	}
 
-	bool Init(SoundStreamCallback callback, int buffbytes, int flags, int samplerate, void *userdata)
+	bool Init(SoundStreamCallback callback, int buffbytes, SampleType stype, ChannelConfig chans, int samplerate, void *userdata)
 	{
 		if(!SetupSource())
 			return false;
@@ -471,46 +492,30 @@ public:
 		SampleRate = samplerate;
 
 		Format = AL_NONE;
-		if((flags&Bits8)) /* Signed or unsigned? We assume unsigned 8-bit... */
+		if(stype == SampleType_UInt8)
 		{
-			if((flags&Mono)) Format = AL_FORMAT_MONO8;
-			else Format = AL_FORMAT_STEREO8;
+			if(chans == ChannelConfig_Mono) Format = AL_FORMAT_MONO8;
+			else if(chans == ChannelConfig_Stereo) Format = AL_FORMAT_STEREO8;
+        }
+		else if(stype == SampleType_Int16)
+		{
+			if(chans == ChannelConfig_Mono) Format = AL_FORMAT_MONO16;
+			else if(chans == ChannelConfig_Stereo) Format = AL_FORMAT_STEREO16;
 		}
-		else if((flags&Float))
+		else if(stype == SampleType_Float32 && alIsExtensionPresent("AL_EXT_FLOAT32"))
 		{
-			if(alIsExtensionPresent("AL_EXT_FLOAT32"))
-			{
-				if((flags&Mono)) Format = AL_FORMAT_MONO_FLOAT32;
-				else Format = AL_FORMAT_STEREO_FLOAT32;
-			}
-		}
-		else if((flags&Bits32))
-		{
-		}
-		else
-		{
-			if((flags&Mono)) Format = AL_FORMAT_MONO16;
-			else Format = AL_FORMAT_STEREO16;
+			if(chans == ChannelConfig_Mono) Format = AL_FORMAT_MONO_FLOAT32;
+			else if(chans == ChannelConfig_Stereo) Format = AL_FORMAT_STEREO_FLOAT32;
 		}
 
 		if(Format == AL_NONE)
 		{
-			Printf("Unsupported format: 0x%x\n", flags);
+			Printf("Unhandled audio format: %s, %s\n", GetChannelConfigName(chans),
+				GetSampleTypeName(stype));
 			return false;
 		}
 
-		FrameSize = 1;
-		if((flags&Bits8))
-			FrameSize *= 1;
-		else if((flags&(Bits32|Float)))
-			FrameSize *= 4;
-		else
-			FrameSize *= 2;
-
-		if((flags&Mono))
-			FrameSize *= 1;
-		else
-			FrameSize *= 2;
+		FrameSize = SampleTypeSize(stype) * ChannelCount(chans);
 
 		buffbytes += FrameSize-1;
 		buffbytes -= buffbytes%FrameSize;
@@ -1208,12 +1213,12 @@ void OpenALSoundRenderer::UnloadSound(SoundHandle sfx)
 }
 
 
-SoundStream *OpenALSoundRenderer::CreateStream(SoundStreamCallback callback, int buffbytes, int flags, int samplerate, void *userdata)
+SoundStream *OpenALSoundRenderer::CreateStream(SoundStreamCallback callback, int buffbytes, SampleType stype, ChannelConfig chans, int samplerate, void *userdata)
 {
 	if(StreamThread.get_id() == std::thread::id())
 		StreamThread = std::thread(std::mem_fn(&OpenALSoundRenderer::BackgroundProc), this);
 	OpenALSoundStream *stream = new OpenALSoundStream(this);
-	if (!stream->Init(callback, buffbytes, flags, samplerate, userdata))
+	if (!stream->Init(callback, buffbytes, stype, chans, samplerate, userdata))
 	{
 		delete stream;
 		return NULL;

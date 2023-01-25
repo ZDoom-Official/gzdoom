@@ -42,7 +42,7 @@ public:
 	virtual float GetOutputRate();
 
 	// Streaming sounds.
-	virtual SoundStream *CreateStream(SoundStreamCallback callback, int buffbytes, int flags, int samplerate, void *userdata);
+	SoundStream *CreateStream(SoundStreamCallback callback, int buffbytes, SampleType stype, ChannelConfig chans, int samplerate, void *userdata) override;
 
 	// Starts a sound.
 	FISoundChannel *StartSound(SoundHandle sfx, float vol, float pitch, int chanflags, FISoundChannel *reuse_chan, float startTime) override;
