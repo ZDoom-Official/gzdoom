@@ -126,8 +126,9 @@ SoundStream *S_CreateCustomStream(size_t size, int samplerate, int numchannels, 
 		chans = ChannelConfig_Stereo;
 	else
 		return nullptr;
+	const SampleType stype{(sampletype == MusicSamplesFloat) ? SampleType_Float32 : SampleType_Int16};
 
-	auto stream = GSnd->CreateStream(cb, int(size), SampleType_Int16, chans, samplerate, userdata);
+	auto stream = GSnd->CreateStream(cb, int(size), stype, chans, samplerate, userdata);
 	if (stream)
 	{
 		stream->Play(true, 1);
