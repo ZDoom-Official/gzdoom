@@ -1453,6 +1453,13 @@ DEFINE_ACTION_FUNCTION_NATIVE(AActor, CheckSight, P_CheckSight)
 	ACTION_RETURN_BOOL(P_CheckSight(self, target, flags));
 }
 
+DEFINE_ACTION_FUNCTION_NATIVE(AActor, CheckForSightBlocker, P_CheckForSightBlock)
+{
+	PARAM_SELF_PROLOGUE(AActor);
+	PARAM_OBJECT_NOT_NULL(target, AActor);
+	ACTION_RETURN_OBJECT(P_CheckForSightBlock(self, target));
+}
+
 static void GiveSecret(AActor *self, bool printmessage, bool playsound)
 {
 	P_GiveSecret(self->Level, self, printmessage, playsound, -1);

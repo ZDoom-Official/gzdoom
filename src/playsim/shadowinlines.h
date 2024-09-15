@@ -25,9 +25,11 @@ inline FRandom pr_shadowaimz("VerticalShadowAim");
 //
 //==========================================================================
 
+// Generic actor sight check data.
 struct SightCheckData
 {
 	AActor* HitShadow;
+	AActor* HitSightBlocker;
 };
 
 inline ETraceStatus CheckForShadowBlockers(FTraceResults& res, void* userdata)

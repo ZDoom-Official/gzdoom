@@ -36,6 +36,7 @@
 
 #include "g_levellocals.h"
 #include "actorinlines.h"
+#include "shadowinlines.h"
 
 static FRandom pr_botchecksight ("BotCheckSight");
 static FRandom pr_checksight ("CheckSight");
@@ -838,6 +839,38 @@ sightcounts[2]++;
 =====================
 */
 
+ETraceStatus CheckForSightBlockers(FTraceResults& res, void* userdata)
+{
+	SightCheckData* output = (SightCheckData*)userdata;
+	if (res.HitType == TRACE_HitActor && res.Actor && (res.Actor->flags9 & MF9_BLOCKSIGHT))
+	{
+		output->HitSightBlocker = res.Actor;
+		return TRACE_Stop;
+	}
+
+	if (res.HitType != TRACE_HitActor)
+	{
+		return TRACE_Stop;
+	}
+
+	return TRACE_Continue;
+}
+
+// [inkoalawetrust] Check if an MF9_BLOCKSIGHT actor is standing between t1 and t2.
+AActor* P_CheckForSightBlock(AActor* t1, AActor* t2)
+{
+	FTraceResults result;
+	SightCheckData SightCheck;
+	SightCheck.HitSightBlocker = nullptr;
+	DVector3 dir = t1->Vec3To(t2);
+	double dist = dir.Length();
+	DVector3 origin = t1->PosPlusZ(t1->Height * 0.75); //Standard sight checks are done at this height too.
+
+	Trace(origin, t1->Sector, dir, dist, ActorFlags::FromInt(0xFFFFFFFF), ML_BLOCKEVERYTHING, t1, result, 0, CheckForSightBlockers, &SightCheck);
+
+	return SightCheck.HitSightBlocker;
+}
+
 int P_CheckSight (AActor *t1, AActor *t2, int flags)
 {
 	SightCycles.Clock();
@@ -898,6 +931,18 @@ sightcounts[0]++;
 			   t1->Z() >= s2->heightsec->floorplane.ZatPoint(t1)) ||
 			  (t2->Z() >= s2->heightsec->ceilingplane.ZatPoint(t2) &&
 			   t1->Top() <= s2->heightsec->ceilingplane.ZatPoint(t1)))))
+		{
+			res = false;
+			goto done;
+		}
+	}
+
+	// [inkoalawetrust] All trivial checks passed, now check for MF9_BLOCKSIGHT
+	if (t1->flags9 & MF9_DOBLOCKSIGHT)
+	{
+		AActor* blocker = P_CheckForSightBlock(t1, t2);
+
+		if (blocker != nullptr)
 		{
 			res = false;
 			goto done;

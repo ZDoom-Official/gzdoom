@@ -783,6 +783,7 @@ class Actor : Thinker native
 	native Actor, int LineAttack(double angle, double distance, double pitch, int damage, Name damageType, class<Actor> pufftype, int flags = 0, out FTranslatedLineTarget victim = null, double offsetz = 0., double offsetforward = 0., double offsetside = 0.);
 	native bool LineTrace(double angle, double distance, double pitch, int flags = 0, double offsetz = 0., double offsetforward = 0., double offsetside = 0., out FLineTraceData data = null);
 	native bool CheckSight(Actor target, int flags = 0);
+	native Actor CheckForSightBlocker (Actor target);
 	native bool IsVisible(Actor other, bool allaround, LookExParams params = null);
 	native bool, Actor, double PerformShadowChecks (Actor other, Vector3 pos);
 	native bool HitFriend();
