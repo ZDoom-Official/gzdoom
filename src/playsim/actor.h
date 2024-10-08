@@ -951,6 +951,14 @@ public:
 	// Do I hate the other actor?
 	bool IsHostile (AActor *other);
 
+	// Can I detect the other actor?
+	bool CanDetect(AActor *other);
+	bool CallCanDetect(AActor *other);
+
+	// Can I be detected by the other actor?
+	bool CanBeDetectedBy(AActor *other);
+	bool CallCanBeDetectedBy(AActor *other);
+
 	inline bool IsNoClip2() const;
 	void CheckPortalTransition(bool islinked);
 	DVector3 GetPortalTransition(double byoffset, sector_t **pSec = NULL);

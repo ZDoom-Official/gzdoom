@@ -139,6 +139,7 @@ static FRandom pr_missiledamage ("MissileDamage");
 static FRandom pr_multiclasschoice ("MultiClassChoice");
 static FRandom pr_rockettrail("RocketTrail");
 static FRandom pr_uniquetid("UniqueTID");
+static FRandom pr_canbedetectedby("CanBeDetectedBy");
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
 
@@ -7550,6 +7551,104 @@ bool AActor::IsHostile (AActor *other)
 	}
 	return true;
 }
+
+//==========================================================================
+//
+// AActor :: CanBeDetectedBy
+//
+// Override this if you want to customize the conditions in which another
+// actor can detect this one with A_Look
+//
+//==========================================================================
+
+bool AActor::CanBeDetectedBy(AActor *other)
+{
+	static FName SneakSpeed = FName("SneakSpeed");
+	static FName NonSneakDetectionChance = FName("NonSneakDetectionChance");
+	if (this->player)
+	{
+		if (!(other->flags6 & MF6_SEEINVISIBLE)) 
+		{
+			if (((this->flags & MF_SHADOW) && !(this->Level->i_compatflags & COMPATF_INVISIBILITY)) || (this->flags3 & MF3_GHOST))
+			{
+				double distancesquared = this->Distance2DSquared(other);
+				double velsquared = this->Vel.LengthSquared();
+				double meleerange = other->meleerange + DEFMELEEDELTA;
+				double sneakspeedsquared = this->FloatVar(SneakSpeed);
+				sneakspeedsquared = sneakspeedsquared * sneakspeedsquared;
+
+				if (distancesquared > (2 * meleerange * 2 * meleerange) && velsquared < sneakspeedsquared)
+				{
+					// Player is sneaking - can't detect
+					return false;
+				}
+				double nonsneakdetectionchance = this->FloatVar(NonSneakDetectionChance);
+				if (pr_canbedetectedby.GenRand_Real1() < nonsneakdetectionchance)
+				{
+					// Player isn't sneaking, but still didn't detect
+					return false;
+				}
+			}
+		}
+	}
+	return true;
+}
+
+DEFINE_ACTION_FUNCTION(AActor, CanBeDetectedBy)
+{
+	PARAM_SELF_PROLOGUE(AActor);
+	PARAM_OBJECT(other, AActor);
+	ACTION_RETURN_BOOL(self->CanBeDetectedBy(other));
+}
+
+bool AActor::CallCanBeDetectedBy(AActor *other)
+{
+	IFVIRTUAL(AActor, CanBeDetectedBy)
+	{
+		VMValue params[] = { (DObject*)this, other };
+		int retv;
+		VMReturn ret(&retv);
+		VMCall(func, params, 2, &ret, 1);
+		return !!retv;
+	}
+	return CanBeDetectedBy(other);
+}
+
+//==========================================================================
+//
+// AActor :: CanDetect
+//
+// Customize this if you want to customize the conditions under which this
+// actor can detect another one with A_Look
+//
+//==========================================================================
+
+bool AActor::CanDetect(AActor *other)
+{
+	return true;
+}
+
+DEFINE_ACTION_FUNCTION(AActor, CanDetect)
+{
+	PARAM_SELF_PROLOGUE(AActor);
+	PARAM_OBJECT(other, AActor);
+	ACTION_RETURN_BOOL(self->CanDetect(other));
+}
+
+bool AActor::CallCanDetect(AActor *other)
+{
+	IFVIRTUAL(AActor, CanDetect)
+	{
+		VMValue params[] = { (DObject*)this, other };
+		int retv;
+		VMReturn ret(&retv);
+		VMCall(func, params, 2, &ret, 1);
+		return !!retv;
+	}
+	return CanDetect(other);
+}
+
+
 
 //==========================================================================
 //

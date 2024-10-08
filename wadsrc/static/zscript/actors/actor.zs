@@ -867,6 +867,8 @@ class Actor : Thinker native
 	native bool BouncePlane(readonly<SecPlane> plane);
 	native void PlayBounceSound(bool onFloor);
 	native bool ReflectOffActor(Actor blocking);
+	native virtual bool CanDetect(Actor actor);
+	native virtual bool CanBeDetectedBy(Actor actor);
 
 	clearscope double PitchTo(Actor target, double zOfs = 0, double targZOfs = 0, bool absolute = false) const
 	{
@@ -1488,8 +1490,6 @@ class Actor : Thinker native
 	{
 		if (player == NULL) Destroy();
 	}
-
-	
 	
 	States(Actor, Overlay, Weapon, Item)
 	{

@@ -63,6 +63,8 @@ struct FRenderViewpoint;
 #define USERANGE		(64.)
 
 #define DEFMELEERANGE		(64.)
+#define DEFMELEEDELTA		(20.)
+
 #define MISSILERANGE	(32*64.)
 #define PLAYERMISSILERANGE	(8192.)	// [RH] New MISSILERANGE for players
 

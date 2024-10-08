@@ -59,7 +59,6 @@ static FRandom pr_opendoor ("OpenDoor");
 static FRandom pr_trywalk ("TryWalk");
 static FRandom pr_newchasedir ("NewChaseDir");
 static FRandom pr_lookformonsters ("LookForMonsters");
-static FRandom pr_lookforplayers ("LookForPlayers");
 static FRandom pr_scaredycat ("Anubis");
 	   FRandom pr_chase ("Chase");
 	   FRandom pr_facetarget ("FaceTarget");
@@ -1840,22 +1839,10 @@ int P_LookForPlayers (AActor *actor, INTBOOL allaround, FLookExParams *params)
 		if (!P_IsVisible (actor, player->mo, allaround, params))
 			continue;			// out of sight
 
-		// [RC] Well, let's let special monsters with this flag active be able to see
-		// the player then, eh?
-		if(!(actor->flags6 & MF6_SEEINVISIBLE)) 
+
+		if ( !actor->CallCanDetect(player->mo) || !player->mo->CallCanBeDetectedBy(actor) )
 		{
-			if ((player->mo->flags & MF_SHADOW && !(actor->Level->i_compatflags & COMPATF_INVISIBILITY)) ||
-				player->mo->flags3 & MF3_GHOST)
-			{
-				if (player->mo->Distance2D (actor) > 128 && player->mo->Vel.XY().LengthSquared() < 5*5)
-				{ // Player is sneaking - can't detect
-					continue;
-				}
-				if (pr_lookforplayers() < 225)
-				{ // Player isn't sneaking, but still didn't detect
-					continue;
-				}
-			}
+			continue;
 		}
 		
 		// [RH] Need to be sure the reactiontime is 0 if the monster is

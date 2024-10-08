@@ -53,6 +53,8 @@ class PlayerPawn : Actor
 	double		FullHeight;
 	double		curBob;
 	double		prevBob;
+	double		SneakSpeed;				// Speed at which the player is considered to be sneaking (used for non-vanilla blursphere and heretic ghostsphere)
+	double		NonSneakDetectionChance;	// Chance to detect the player while they're sneaking and invisible
 
 	meta Name HealingRadiusType;
 	meta Name InvulMode;
@@ -82,6 +84,8 @@ class PlayerPawn : Actor
 	property ViewBob: ViewBob;
 	property ViewBobSpeed: ViewBobSpeed;
 	property WaterClimbSpeed : WaterClimbSpeed;
+	property SneakSpeed : SneakSpeed;
+	property NonSneakDetectionChance : NonSneakDetectionChance;
 	
 	flagdef NoThrustWhenInvul: PlayerFlags, 0;
 	flagdef CanSuperMorph: PlayerFlags, 1;
@@ -133,6 +137,8 @@ class PlayerPawn : Actor
 		Player.ViewBobSpeed 20;
 		Player.WaterClimbSpeed 3.5;
 		Player.TeleportFreezeTime 18;
+		Player.SneakSpeed 5.0;
+		Player.NonSneakDetectionChance 225.0 / 255.0;
 		Obituary "$OB_MPDEFAULT";
 	}
 	
@@ -256,12 +262,6 @@ class PlayerPawn : Actor
 	virtual void MorphPlayerThink()
 	{
 	}
-	
-	//----------------------------------------------------------------------------
-	//
-	// 
-	//
-	//----------------------------------------------------------------------------
 
 	virtual void OnRespawn()
 	{
@@ -279,12 +279,6 @@ class PlayerPawn : Actor
 			bRespawnInvul = true;			// [RH] special effect
 		}
 	}
-	
-	//----------------------------------------------------------------------------
-	//
-	// 
-	//
-	//----------------------------------------------------------------------------
 
 	override String GetObituary(Actor victim, Actor inflictor, Name mod, bool playerattack)
 	{
