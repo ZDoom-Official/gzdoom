@@ -754,8 +754,8 @@ void G_BuildTiccmd (ticcmd_t *cmd)
 			scale += (move_min / move_max) * sqrtOf2Frac;
 		}
 
-		axis_forward = std::clamp(axis_forward * scale, 0.f, 1.f);
-		axis_side = std::clamp(axis_side * scale, 0.f, 1.f);
+		axis_forward = std::clamp(axis_forward * scale, -1.f, 1.f);
+		axis_side = std::clamp(axis_side * scale, -1.f, 1.f);
 	}
 
 	if (axis_pitch != 0)
