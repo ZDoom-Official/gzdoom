@@ -90,10 +90,6 @@ public:
 	{
 		return Axes[axis].DeadZone;
 	}
-	EJoyAxis GetAxisMap(int axis)
-	{
-		return Axes[axis].GameAxis;
-	}
 	const char *GetAxisName(int axis)
 	{
 		return Axes[axis].Name.GetChars();
@@ -106,10 +102,6 @@ public:
 	void SetAxisDeadZone(int axis, float zone)
 	{
 		Axes[axis].DeadZone = clamp(zone, MIN_DEADZONE, 1.f);
-	}
-	void SetAxisMap(int axis, EJoyAxis gameaxis)
-	{
-		Axes[axis].GameAxis = gameaxis;
 	}
 	void SetAxisScale(int axis, float scale)
 	{
@@ -124,12 +116,6 @@ public:
 	bool IsAxisDeadZoneDefault(int axis)
 	{
 		return Axes[axis].DeadZone <= MIN_DEADZONE;
-	}
-	bool IsAxisMapDefault(int axis)
-	{
-		if(axis >= 5)
-			return Axes[axis].GameAxis == JOYAXIS_None;
-		return Axes[axis].GameAxis == DefaultAxes[axis];
 	}
 	bool IsAxisScaleDefault(int axis)
 	{
@@ -149,10 +135,7 @@ public:
 			info.Multiplier = 1.0f;
 			info.Value = 0.0;
 			info.ButtonValue = 0;
-			if(i >= 5)
-				info.GameAxis = JOYAXIS_None;
-			else
-				info.GameAxis = DefaultAxes[i];
+			info.Keys[0] = info.Keys[1] = 0;
 			Axes.Push(info);
 		}
 	}
@@ -178,13 +161,27 @@ public:
 		return id;
 	}
 
-	void AddAxes(float axes[NUM_JOYAXIS])
+	void AddAxes(float axes[NUM_KEYS])
 	{
 		// Add to game axes.
 		for (int i = 0; i < GetNumAxes(); ++i)
 		{
-			if(Axes[i].GameAxis != JOYAXIS_None)
-				axes[Axes[i].GameAxis] -= float(Axes[i].Value * Multiplier * Axes[i].Multiplier);
+			float axis_value = float(Axes[i].Value * Multiplier * Axes[i].Multiplier);
+			int axis_key = 0;
+
+			if (axis_value > 0.0f)
+			{
+				axis_key = Axes[i].Keys[0];
+			}
+			else if (axis_value < 0.0f)
+			{
+				axis_key = Axes[i].Keys[1];
+			}
+
+			if (axis_key > 0 && axis_key < NUM_KEYS)
+			{
+				axes[axis_key] += fabs(axis_value);
+			}
 		}
 	}
 
@@ -195,6 +192,16 @@ public:
 		for (int i = 0; i < NumAxes; ++i)
 		{
 			buttonstate = 0;
+
+			if (i < NUM_JOYAXISBUTTONS)
+			{
+				Axes[i].Keys[0] = KEY_JOYAXIS1PLUS + (i * 2);
+				Axes[i].Keys[1] = KEY_JOYAXIS1PLUS + (i * 2) + 1;
+			}
+			else
+			{
+				Axes[i].Keys[0] = Axes[i].Keys[1] = 0;
+			}
 
 			Axes[i].Value = SDL_JoystickGetAxis(Device, i)/32767.0;
 			Axes[i].Value = Joy_RemoveDeadZone(Axes[i].Value, Axes[i].DeadZone, &buttonstate);
@@ -255,11 +262,10 @@ protected:
 		FString Name;
 		float DeadZone;
 		float Multiplier;
-		EJoyAxis GameAxis;
+		int Keys[2];
 		double Value;
 		uint8_t ButtonValue;
 	};
-	static const EJoyAxis DefaultAxes[5];
 
 	int					DeviceIndex;
 	SDL_Joystick		*Device;
@@ -272,9 +278,6 @@ protected:
 
 	friend class SDLInputJoystickManager;
 };
-
-// [Nash 4 Feb 2024] seems like on Linux, the third axis is actually the Left Trigger, resulting in the player uncontrollably looking upwards.
-const EJoyAxis SDLInputJoystick::DefaultAxes[5] = {JOYAXIS_Side, JOYAXIS_Forward, JOYAXIS_None, JOYAXIS_Yaw, JOYAXIS_Pitch};
 
 class SDLInputJoystickManager
 {
@@ -296,7 +299,7 @@ public:
 			delete Joysticks[i];
 	}
 
-	void AddAxes(float axes[NUM_JOYAXIS])
+	void AddAxes(float axes[NUM_KEYS])
 	{
 		for(unsigned int i = 0;i < Joysticks.Size();i++)
 			Joysticks[i]->AddAxes(axes);
@@ -344,9 +347,9 @@ void I_GetJoysticks(TArray<IJoystickConfig *> &sticks)
 		JoystickManager->GetDevices(sticks);
 }
 
-void I_GetAxes(float axes[NUM_JOYAXIS])
+void I_GetAxes(float axes[NUM_KEYS])
 {
-	for (int i = 0; i < NUM_JOYAXIS; ++i)
+	for (int i = 0; i < NUM_KEYS; ++i)
 	{
 		axes[i] = 0;
 	}
