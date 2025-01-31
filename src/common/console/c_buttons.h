@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "tarray.h"
 #include "name.h"
+#include "keydef.h"
 
 // Actions
 struct FButtonStatus
@@ -14,13 +15,18 @@ struct FButtonStatus
 	bool bWentDown;			// Button went down this tic
 	bool bWentUp;			// Button went up this tic
 	bool bReleaseLock;		// Lock ReleaseKey call in ResetButtonStates
+
+	bool bIsAxis;	// Whenever or not this button is being controlled by any axis.
+	float Axis;		// How far the button has been pressed. Updated by I_GetAxes.
+
 	void (*PressHandler)();		// for optional game-side customization
 	void (*ReleaseHandler)();
 
 	bool PressKey (int keynum);		// Returns true if this key caused the button to be pressed.
 	bool ReleaseKey (int keynum);	// Returns true if this key is no longer pressed.
+	void AddAxes (float joyaxes[NUM_KEYS]); // Update joystick axis information.
 	void ResetTriggers () { bWentDown = bWentUp = false; }
-	void Reset () { bDown = bWentDown = bWentUp = false; }
+	void Reset () { bDown = bWentDown = bWentUp = bIsAxis = false; Axis = 0.0f; }
 };
 
 class ButtonMap
@@ -53,6 +59,7 @@ public:
 
 	void ResetButtonTriggers();	// Call ResetTriggers for all buttons
 	void ResetButtonStates();		// Same as above, but also clear bDown
+	void GetAxes();				// Call AddAxes for all buttons
 	int ListActionCommands(const char* pattern);
 	void AddButtonTabCommands();
 
@@ -60,6 +67,23 @@ public:
 	bool ButtonDown(int x) const
 	{
 		return Buttons[x].bDown;
+	}
+
+	bool DigitalButtonDown(int x) const
+	{
+		// Like ButtonDown, but only for digital buttons. Axes are excluded.
+		return (Buttons[x].bIsAxis == false && Buttons[x].bDown == true);
+	}
+
+	float AnalogButtonDown(int x) const
+	{
+		// Gets the analog value of a button when it is bound to an axis.
+		if (Buttons[x].bIsAxis == true)
+		{
+			return Buttons[x].Axis;
+		}
+
+		return 0.0f;
 	}
 
 	bool ButtonPressed(int x) const

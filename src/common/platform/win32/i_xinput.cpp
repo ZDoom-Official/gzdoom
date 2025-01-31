@@ -81,7 +81,7 @@ public:
 	~FXInputController();
 
 	void ProcessInput();
-	void AddAxes(float axes[NUM_JOYAXIS]);
+	void AddAxes(float axes[NUM_KEYS]);
 	bool IsConnected() { return Connected; }
 
 	// IJoystickConfig interface
@@ -91,17 +91,14 @@ public:
 
 	int GetNumAxes();
 	float GetAxisDeadZone(int axis);
-	EJoyAxis GetAxisMap(int axis);
 	const char *GetAxisName(int axis);
 	float GetAxisScale(int axis);
 
 	void SetAxisDeadZone(int axis, float deadzone);
-	void SetAxisMap(int axis, EJoyAxis gameaxis);
 	void SetAxisScale(int axis, float scale);
 
 	bool IsSensitivityDefault();
 	bool IsAxisDeadZoneDefault(int axis);
-	bool IsAxisMapDefault(int axis);
 	bool IsAxisScaleDefault(int axis);
 
 	bool GetEnabled();
@@ -120,13 +117,12 @@ protected:
 		float Value;
 		float DeadZone;
 		float Multiplier;
-		EJoyAxis GameAxis;
+		int Keys[2];
 		uint8_t ButtonValue;
 	};
 	struct DefaultAxisConfig
 	{
 		float DeadZone;
-		EJoyAxis GameAxis;
 		float Multiplier;
 	};
 	enum
@@ -166,7 +162,7 @@ public:
 	bool GetDevice();
 	void ProcessInput();
 	bool WndProcHook(HWND hWnd, uint32_t message, WPARAM wParam, LPARAM lParam, LRESULT *result);
-	void AddAxes(float axes[NUM_JOYAXIS]);
+	void AddAxes(float axes[NUM_KEYS]);
 	void GetDevices(TArray<IJoystickConfig *> &sticks);
 	IJoystickConfig *Rescan();
 
@@ -211,13 +207,13 @@ static const char *AxisNames[] =
 
 FXInputController::DefaultAxisConfig FXInputController::DefaultAxes[NUM_AXES] =
 {
-	// Dead zone, game axis, multiplier
-	{ XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE / 32768.f, JOYAXIS_Side, 1 },		// ThumbLX
-	{ XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE / 32768.f, JOYAXIS_Forward, 1 },	// ThumbLY
-	{ XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE / 32768.f, JOYAXIS_Yaw, 1 },		// ThumbRX
-	{ XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE / 32768.f, JOYAXIS_Pitch, 0.75 },	// ThumbRY
-	{ XINPUT_GAMEPAD_TRIGGER_THRESHOLD / 256.f, JOYAXIS_None, 0 },			// LeftTrigger
-	{ XINPUT_GAMEPAD_TRIGGER_THRESHOLD / 256.f, JOYAXIS_None, 0 }			// RightTrigger
+	// Dead zone, multiplier
+	{ XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE / 32768.f, 1 },		// ThumbLX
+	{ XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE / 32768.f, 1 },		// ThumbLY
+	{ XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE / 32768.f, 1 },		// ThumbRX
+	{ XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE / 32768.f, 0.75 },	// ThumbRY
+	{ XINPUT_GAMEPAD_TRIGGER_THRESHOLD / 256.f, 0 },			// LeftTrigger
+	{ XINPUT_GAMEPAD_TRIGGER_THRESHOLD / 256.f, 0 }				// RightTrigger
 };
 
 // CODE --------------------------------------------------------------------
@@ -323,6 +319,11 @@ void FXInputController::ProcessThumbstick(int value1, AxisInfo *axis1,
 	uint8_t buttonstate;
 	double axisval1, axisval2;
 
+	axis1->Keys[0] = base;
+	axis1->Keys[1] = base + 1;
+	axis2->Keys[0] = base + 2;
+	axis2->Keys[1] = base + 3;
+
 	axisval1 = (value1 - SHRT_MIN) * 2.0 / 65536 - 1.0;
 	axisval2 = (value2 - SHRT_MIN) * 2.0 / 65536 - 1.0;
 	axisval1 = Joy_RemoveDeadZone(axisval1, axis1->DeadZone, NULL);
@@ -349,6 +350,9 @@ void FXInputController::ProcessTrigger(int value, AxisInfo *axis, int base)
 {
 	uint8_t buttonstate;
 	double axisval;
+
+	axis->Keys[0] = base;
+	axis->Keys[1] = 0;
 
 	axisval = Joy_RemoveDeadZone(value / 256.0, axis->DeadZone, &buttonstate);
 	Joy_GenerateButtonEvents(axis->ButtonValue, buttonstate, 1, base);
@@ -414,12 +418,27 @@ void FXInputController::Detached()
 //
 //==========================================================================
 
-void FXInputController::AddAxes(float axes[NUM_JOYAXIS])
+void FXInputController::AddAxes(float axes[NUM_KEYS])
 {
-	// Add to game axes.
 	for (int i = 0; i < NUM_AXES; ++i)
 	{
-		axes[Axes[i].GameAxis] -= float(Axes[i].Value * Multiplier * Axes[i].Multiplier);
+		// Add to the game axis.
+		float axis_value = float(Axes[i].Value * Multiplier * Axes[i].Multiplier);
+		int axis_key = 0;
+
+		if (axis_value > 0.0f)
+		{
+			axis_key = Axes[i].Keys[0];
+		}
+		else if (axis_value < 0.0f)
+		{
+			axis_key = Axes[i].Keys[1];
+		}
+
+		if (axis_key > 0 && axis_key < NUM_KEYS)
+		{
+			axes[axis_key] += fabs(axis_value);
+		}
 	}
 }
 
@@ -435,7 +454,6 @@ void FXInputController::SetDefaultConfig()
 	for (int i = 0; i < NUM_AXES; ++i)
 	{
 		Axes[i].DeadZone = DefaultAxes[i].DeadZone;
-		Axes[i].GameAxis = DefaultAxes[i].GameAxis;
 		Axes[i].Multiplier = DefaultAxes[i].Multiplier;
 	}
 }
@@ -525,21 +543,6 @@ float FXInputController::GetAxisDeadZone(int axis)
 
 //==========================================================================
 //
-// FXInputController :: GetAxisMap
-//
-//==========================================================================
-
-EJoyAxis FXInputController::GetAxisMap(int axis)
-{
-	if (unsigned(axis) < NUM_AXES)
-	{
-		return Axes[axis].GameAxis;
-	}
-	return JOYAXIS_None;
-}
-
-//==========================================================================
-//
 // FXInputController :: GetAxisName
 //
 //==========================================================================
@@ -579,20 +582,6 @@ void FXInputController::SetAxisDeadZone(int axis, float deadzone)
 	if (unsigned(axis) < NUM_AXES)
 	{
 		Axes[axis].DeadZone = clamp(deadzone, 0.f, 1.f);
-	}
-}
-
-//==========================================================================
-//
-// FXInputController :: SetAxisMap
-//
-//==========================================================================
-
-void FXInputController::SetAxisMap(int axis, EJoyAxis gameaxis)
-{
-	if (unsigned(axis) < NUM_AXES)
-	{
-		Axes[axis].GameAxis = (unsigned(gameaxis) < NUM_JOYAXIS) ? gameaxis : JOYAXIS_None;
 	}
 }
 
@@ -660,21 +649,6 @@ bool FXInputController::GetEnabled()
 void FXInputController::SetEnabled(bool enabled)
 {
 	Enabled = enabled;
-}
-
-//===========================================================================
-//
-// FXInputController :: IsAxisMapDefault
-//
-//===========================================================================
-
-bool FXInputController::IsAxisMapDefault(int axis)
-{
-	if (unsigned(axis) < NUM_AXES)
-	{
-		return Axes[axis].GameAxis == DefaultAxes[axis].GameAxis;
-	}
-	return true;
 }
 
 //==========================================================================
@@ -766,7 +740,7 @@ void FXInputManager::ProcessInput()
 //
 //===========================================================================
 
-void FXInputManager::AddAxes(float axes[NUM_JOYAXIS])
+void FXInputManager::AddAxes(float axes[NUM_KEYS])
 {
 	for (int i = 0; i < XUSER_MAX_COUNT; ++i)
 	{

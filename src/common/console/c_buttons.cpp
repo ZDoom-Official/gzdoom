@@ -39,6 +39,7 @@
 #include "printf.h"
 #include "cmdlib.h"
 #include "c_console.h"
+#include "m_joy.h"
 
 ButtonMap buttonMap;
 
@@ -150,6 +151,23 @@ void ButtonMap::ResetButtonStates ()
 //
 //=============================================================================
 
+void ButtonMap::GetAxes ()
+{
+	float joyaxes[NUM_KEYS];
+	I_GetAxes(joyaxes);
+
+	for (auto &btn : Buttons)
+	{
+		btn.AddAxes(joyaxes);
+	}
+}
+
+//=============================================================================
+//
+//
+//
+//=============================================================================
+
 bool FButtonStatus::PressKey (int keynum)
 {
 	int i, open;
@@ -238,6 +256,37 @@ bool FButtonStatus::ReleaseKey (int keynum)
 	}
 	// Returns true if releasing this key caused the button to go up.
 	return wasdown && !bDown;
+}
+
+//=============================================================================
+//
+//
+//
+//=============================================================================
+
+void FButtonStatus::AddAxes (float joyaxes[NUM_KEYS])
+{
+	int i, open;
+
+	bIsAxis = false;
+	Axis = 0.0f;
+
+	for (i = 0; i < MAX_KEYS; i++)
+	{
+		if (Keys[i] == 0)
+		{
+			break;
+		}
+
+		float axis_value = joyaxes[ Keys[i] ];
+		if (axis_value > 0.0f)
+		{
+			bIsAxis = true;
+			Axis += axis_value;
+		}
+	}
+
+	Axis = clamp<float>(Axis, 0.0f, 1.0f);
 }
 
 //=============================================================================

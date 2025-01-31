@@ -162,18 +162,6 @@ bool M_LoadJoystickConfig(IJoystickConfig *joy)
 		{
 			joy->SetAxisScale(i, (float)atof(value));
 		}
-
-		mysnprintf(key + axislen, countof(key) - axislen, "map");
-		value = GameConfig->GetValueForKey(key);
-		if (value)
-		{
-			EJoyAxis gameaxis = (EJoyAxis)atoi(value);
-			if (gameaxis < JOYAXIS_None || gameaxis >= NUM_JOYAXIS)
-			{
-				gameaxis = JOYAXIS_None;
-			}
-			joy->SetAxisMap(i, gameaxis);
-		}
 	}
 	return true;
 }
@@ -225,12 +213,6 @@ void M_SaveJoystickConfig(IJoystickConfig *joy)
 			{
 				mysnprintf(key + axislen, countof(key) - axislen, "scale");
 				mysnprintf(value, countof(value), "%g", joy->GetAxisScale(i));
-				GameConfig->SetValueForKey(key, value);
-			}
-			if (!joy->IsAxisMapDefault(i))
-			{
-				mysnprintf(key + axislen, countof(key) - axislen, "map");
-				mysnprintf(value, countof(value), "%d", joy->GetAxisMap(i));
 				GameConfig->SetValueForKey(key, value);
 			}
 		}
