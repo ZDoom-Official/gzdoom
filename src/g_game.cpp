@@ -210,7 +210,9 @@ CVAR (Bool,		freelook,		true,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)		// Always mlook?
 CVAR (Bool,		lookstrafe,		false,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)		// Always strafe with mouse?
 CVAR (Float,	m_forward,		1.f,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)
 CVAR (Float,	m_side,			2.f,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)
- 
+
+CVAR (Bool, cl_analogstraferun, false, CVAR_GLOBALCONFIG|CVAR_ARCHIVE)
+
 int 			turnheld;								// for accelerative turning 
 
 EXTERN_CVAR (Bool, invertmouse)
@@ -730,6 +732,30 @@ void G_BuildTiccmd (ticcmd_t *cmd)
 	{
 		axis_pitch = axis_forward;
 		axis_forward = 0.0f;
+	}
+
+	if (cl_analogstraferun)
+	{
+		// Rescale diagonal analog input from roughly [0.77, 0.77] to [1.0, 1.0],
+		// which enables analog sticks to be able to strafe run like a keyboard can.
+
+		// Disabled by default because it's inaccurate to how Linux Doom itself
+		// handled analog input, some analog sticks may be able to actually reach 1.0,
+		// some might remap a D-Pad to the stick, so on...
+
+		const float sqrtOf2Frac = 0.41421356237309504880; // sqrt(2)'s fractional value
+
+		float move_min = min<float>(fabs(axis_side), fabs(axis_forward));
+		float move_max = max<float>(fabs(axis_side), fabs(axis_forward));
+
+		float scale = 1.0f;
+		if (move_max > EQUAL_EPSILON)
+		{
+			scale += (move_min / move_max) * sqrtOf2Frac;
+		}
+
+		axis_forward = std::clamp(axis_forward * scale, 0.f, 1.f);
+		axis_side = std::clamp(axis_side * scale, 0.f, 1.f);
 	}
 
 	if (axis_pitch != 0)
