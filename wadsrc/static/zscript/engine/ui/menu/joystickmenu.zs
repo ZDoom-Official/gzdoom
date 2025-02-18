@@ -334,8 +334,6 @@ class OptionMenuItemJoyConfigMenu : OptionMenuItemSubmenu
 					it = new("OptionMenuItemStaticText").Init(" ", false);
 					opt.mItems.Push(it);
 
-					it = new("OptionMenuItemJoyMap").Init(joy.GetAxisName(i), i, "JoyAxisMapNames", false, joy);
-					opt.mItems.Push(it);
 					it = new("OptionMenuSliderJoyScale").Init("$JOYMNU_OVRSENS", i, 0, 4, 0.1, 3, joy);
 					opt.mItems.Push(it);
 					it = new("OptionMenuItemInverter").Init("$JOYMNU_INVERT", i, false, joy);

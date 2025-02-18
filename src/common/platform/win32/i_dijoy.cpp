@@ -158,7 +158,7 @@ public:
 
 	bool GetDevice();
 	void ProcessInput();
-	void AddAxes(float axes[NUM_JOYAXIS]);
+	void AddAxes(float axes[NUM_KEYS]);
 
 	// IJoystickConfig interface
 	FString GetName();
@@ -167,17 +167,14 @@ public:
 
 	int GetNumAxes();
 	float GetAxisDeadZone(int axis);
-	EJoyAxis GetAxisMap(int axis);
 	const char *GetAxisName(int axis);
 	float GetAxisScale(int axis);
 
 	void SetAxisDeadZone(int axis, float deadzone);
-	void SetAxisMap(int axis, EJoyAxis gameaxis);
 	void SetAxisScale(int axis, float scale);
 
 	bool IsSensitivityDefault();
 	bool IsAxisDeadZoneDefault(int axis);
-	bool IsAxisMapDefault(int axis);
 	bool IsAxisScaleDefault(int axis);
 
 	bool GetEnabled();
@@ -201,7 +198,7 @@ protected:
 		float Value;
 		float DeadZone, DefaultDeadZone;
 		float Multiplier, DefaultMultiplier;
-		EJoyAxis GameAxis, DefaultGameAxis;
+		int Keys[2]; // 0: positive, 1: negative
 		uint8_t ButtonValue;
 	};
 	struct ButtonInfo
@@ -244,7 +241,7 @@ public:
 
 	bool GetDevice();
 	void ProcessInput();
-	void AddAxes(float axes[NUM_JOYAXIS]);
+	void AddAxes(float axes[NUM_KEYS]);
 	void GetDevices(TArray<IJoystickConfig *> &sticks);
 	IJoystickConfig *Rescan();
 
@@ -450,6 +447,9 @@ void FDInputJoystick::ProcessInput()
 		double axisval;
 		uint8_t buttonstate = 0;
 
+		info->Keys[0] = KEY_JOYAXIS1PLUS + (i * 2);
+		info->Keys[1] = KEY_JOYAXIS1PLUS + (i * 2) + 1;
+
 		// Scale to [-1.0, 1.0]
 		axisval = (value - info->Min) * 2.0 / (info->Max - info->Min) - 1.0;
 		// Cancel out dead zone
@@ -512,12 +512,27 @@ void FDInputJoystick::ProcessInput()
 //
 //===========================================================================
 
-void FDInputJoystick::AddAxes(float axes[NUM_JOYAXIS])
+void FDInputJoystick::AddAxes(float axes[NUM_KEYS])
 {
 	for (unsigned i = 0; i < Axes.Size(); ++i)
 	{
 		// Add to the game axis.
-		axes[Axes[i].GameAxis] -= float(Axes[i].Value * Multiplier * Axes[i].Multiplier);
+		float axis_value = float(Axes[i].Value * Multiplier * Axes[i].Multiplier);
+		int axis_key = 0;
+
+		if (axis_value > 0.0f)
+		{
+			axis_key = Axes[i].Keys[0];
+		}
+		else if (axis_value < 0.0f)
+		{
+			axis_key = Axes[i].Keys[1];
+		}
+
+		if (axis_key > 0 && axis_key < NUM_KEYS)
+		{
+			axes[axis_key] += fabs(axis_value);
+		}
 	}
 }
 
@@ -593,7 +608,6 @@ BOOL CALLBACK FDInputJoystick::EnumObjectsCallback(LPCDIDEVICEOBJECTINSTANCE lpd
 		info.Ofs = 0;
 		info.Min = diprg.lMin;
 		info.Max = diprg.lMax;
-		info.GameAxis = JOYAXIS_None;
 		info.Value = 0;
 		info.ButtonValue = 0;
 		joy->Axes.Push(info);
@@ -766,45 +780,18 @@ void FDInputJoystick::SetDefaultConfig()
 	{
 		Axes[i].DeadZone = DEFAULT_DEADZONE;
 		Axes[i].Multiplier = 1;
-		Axes[i].GameAxis = JOYAXIS_None;
 	}
 	// Triggers on a 360 controller have a much smaller deadzone.
 	if (Axes.Size() == 5 && Axes[4].Guid == GUID_ZAxis)
 	{
 		Axes[4].DeadZone = 30 / 256.f;
 	}
-	// Two axes? Horizontal is yaw and vertical is forward.
-	if (Axes.Size() == 2)
-	{
-		Axes[0].GameAxis = JOYAXIS_Yaw;
-		Axes[1].GameAxis = JOYAXIS_Forward;
-	}
-	// Three axes? First two are movement, third is yaw.
-	else if (Axes.Size() >= 3)
-	{
-		Axes[0].GameAxis = JOYAXIS_Side;
-		Axes[1].GameAxis = JOYAXIS_Forward;
-		Axes[2].GameAxis = JOYAXIS_Yaw;
-		// Four axes? First two are movement, last two are looking around.
-		if (Axes.Size() >= 4)
-		{
-			Axes[3].GameAxis = JOYAXIS_Pitch;	Axes[3].Multiplier = 0.75f;
-			// Five axes? Use the fifth one for moving up and down.
-			if (Axes.Size() >= 5)
-			{
-				Axes[4].GameAxis = JOYAXIS_Up;
-			}
-		}
-	}
-	// If there is only one axis, then we make no assumptions about how
-	// the user might want to use it.
 
 	// Preserve defaults for config saving.
 	for (i = 0; i < Axes.Size(); ++i)
 	{
 		Axes[i].DefaultDeadZone = Axes[i].DeadZone;
 		Axes[i].DefaultMultiplier = Axes[i].Multiplier;
-		Axes[i].DefaultGameAxis = Axes[i].GameAxis;
 	}
 }
 
@@ -880,21 +867,6 @@ float FDInputJoystick::GetAxisDeadZone(int axis)
 
 //===========================================================================
 //
-// FDInputJoystick :: GetAxisMap
-//
-//===========================================================================
-
-EJoyAxis FDInputJoystick::GetAxisMap(int axis)
-{
-	if (unsigned(axis) >= Axes.Size())
-	{
-		return JOYAXIS_None;
-	}
-	return Axes[axis].GameAxis;
-}
-
-//===========================================================================
-//
 // FDInputJoystick :: GetAxisName
 //
 //===========================================================================
@@ -934,20 +906,6 @@ void FDInputJoystick::SetAxisDeadZone(int axis, float deadzone)
 	if (unsigned(axis) < Axes.Size())
 	{
 		Axes[axis].DeadZone = clamp(deadzone, 0.f, 1.f);
-	}
-}
-
-//===========================================================================
-//
-// FDInputJoystick :: SetAxisMap
-//
-//===========================================================================
-
-void FDInputJoystick::SetAxisMap(int axis, EJoyAxis gameaxis)
-{
-	if (unsigned(axis) < Axes.Size())
-	{
-		Axes[axis].GameAxis = (unsigned(gameaxis) < NUM_JOYAXIS) ? gameaxis : JOYAXIS_None;
 	}
 }
 
@@ -1019,21 +977,6 @@ void FDInputJoystick::SetEnabled(bool enabled)
 
 //===========================================================================
 //
-// FDInputJoystick :: IsAxisMapDefault
-//
-//===========================================================================
-
-bool FDInputJoystick::IsAxisMapDefault(int axis)
-{
-	if (unsigned(axis) < Axes.Size())
-	{
-		return Axes[axis].GameAxis == Axes[axis].DefaultGameAxis;
-	}
-	return true;
-}
-
-//===========================================================================
-//
 // FDInputJoystickManager - Constructor
 //
 //===========================================================================
@@ -1099,7 +1042,7 @@ void FDInputJoystickManager::ProcessInput()
 //
 //===========================================================================
 
-void FDInputJoystickManager :: AddAxes(float axes[NUM_JOYAXIS])
+void FDInputJoystickManager :: AddAxes(float axes[NUM_KEYS])
 {
 	for (unsigned i = 0; i < Devices.Size(); ++i)
 	{
