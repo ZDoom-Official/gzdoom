@@ -146,11 +146,7 @@ extend class Actor
 
 		if (!fromdecorate)
 		{
-			item.Amount -= amount;
-			if (item.Amount <= 0)
-			{
-				item.DepleteOrDestroy();
-			}
+			item.DepleteBy(amount);
 			// It won't be used in non-decorate context, so return false here
 			return false;
 		}
@@ -169,11 +165,10 @@ extend class Actor
 			// Nothing to do here, except maybe res = false;? Would it make sense?
 			result = false;
 		}
-		else if (!amount || amount >= item.Amount)
+		else
 		{
-			item.DepleteOrDestroy();
+			item.DepleteBy(amount);
 		}
-		else item.Amount -= amount;
 
 		return result;
 	}
@@ -271,10 +266,9 @@ extend class Actor
 		{
 			return true;
 		}
-
-		if (--item.Amount <= 0)
+		else
 		{
-			item.DepleteOrDestroy ();
+			item.DepleteBy(1); //useinventory can only really use one item at a time
 		}
 		return true;
 	}

@@ -920,6 +920,25 @@ class Inventory : Actor
 
 	//===========================================================================
 	//
+	// Inventory :: DepleteBy
+	//
+	// Handles item depletion when using or taking items
+	//
+	//===========================================================================
+	virtual void DepleteBy(int by)
+	{
+		if (amount < 1 || by >= amount)
+		{
+			DepleteOrDestroy();
+		}
+		else
+		{
+			amount -= by;
+		}
+	}
+
+	//===========================================================================
+	//
 	// Inventory :: DepleteOrDestroy
 	//
 	// If the item is depleted, just change its amount to 0, otherwise it's destroyed.
