@@ -2336,6 +2336,31 @@ class PlayerPawn : Actor
 		return ReadyWeapon;
 	}
 
+	Weapon CallModifyPickWeapon(int slot, bool checkammo, Weapon pick)
+	{
+		let cur = inv;
+		
+		if(cur) do
+		{
+			pick = cur.ModifyPickWeapon(slot, checkammo, pick);
+		}
+		while(cur = cur.inv)
+		
+		return pick;
+	}
+
+	virtual Weapon PostFindWeapon(int slot, bool checkammo, Weapon orig, Weapon mod)
+	{
+		return mod;
+	}
+
+	Weapon FindWeapon(int slot, bool checkammo)
+	{
+		let orig = PickWeapon(slot, checkammo);
+		let mod = CallModifyPickWeapon(slot, checkammo, orig);
+		return PostFindWeapon(slot, checkammo, orig, mod);
+	}
+
 	//===========================================================================
 	//
 	// FindMostRecentWeapon
@@ -2440,6 +2465,31 @@ class PlayerPawn : Actor
 		return ReadyWeapon;
 	}
 
+	Weapon CallModifyPickNextWeapon(Weapon pick)
+	{
+		let cur = inv;
+		
+		if(cur) do
+		{
+			pick = cur.ModifyPickNextWeapon(pick);
+		}
+		while(cur = cur.inv)
+		
+		return pick;
+	}
+
+	virtual Weapon PostFindNextWeapon(Weapon orig, Weapon mod)
+	{
+		return mod;
+	}
+
+	Weapon FindNextWeapon()
+	{
+		let orig = PickNextWeapon();
+		let mod = CallModifyPickNextWeapon(orig);
+		return PostFindNextWeapon(orig, mod);
+	}
+
 	//===========================================================================
 	//
 	// FWeaponSlots :: PickPrevWeapon
@@ -2491,6 +2541,31 @@ class PlayerPawn : Actor
 			} while ((slot != startslot || index != startindex) && slotschecked <= NUM_WEAPON_SLOTS);
 		}
 		return player.ReadyWeapon;
+	}
+
+	Weapon CallModifyPickPrevWeapon(Weapon pick)
+	{
+		let cur = inv;
+		
+		if(cur) do
+		{
+			pick = cur.ModifyPickPrevWeapon(pick);
+		}
+		while(cur = cur.inv)
+		
+		return pick;
+	}
+
+	virtual Weapon PostFindPrevWeapon(Weapon orig, Weapon mod)
+	{
+		return mod;
+	}
+
+	Weapon FindPrevWeapon()
+	{
+		let orig = PickPrevWeapon();
+		let mod = CallModifyPickPrevWeapon(orig);
+		return PostFindPrevWeapon(orig, mod);
 	}
 
 	//============================================================================

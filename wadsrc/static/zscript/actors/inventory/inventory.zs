@@ -1366,7 +1366,20 @@ class Inventory : Actor
 		}
 	}
 
-	
+	virtual Weapon ModifyPickWeapon(int slot, bool checkammo, Weapon originalPick)
+	{
+		return originalPick;
+	}
+
+	virtual Weapon ModifyPickNextWeapon(Weapon originalPick)
+	{
+		return originalPick;
+	}
+
+	virtual Weapon ModifyPickPrevWeapon(Weapon originalPick)
+	{
+		return originalPick;
+	}
 	
 }
 
