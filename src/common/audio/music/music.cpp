@@ -173,10 +173,16 @@ static TArray<SoundStream*> customStreams;
 
 SoundStream *S_CreateCustomStream(size_t size, int samplerate, int numchannels, MusicCustomStreamType sampletype, StreamCallback cb, void *userdata)
 {
-	int flags = 0;
-	if (numchannels < 2) flags |= SoundStream::Mono;
-	if (sampletype == MusicSamplesFloat) flags |= SoundStream::Float;
-	auto stream = GSnd->CreateStream(cb, int(size), flags, samplerate, userdata);
+	ChannelConfig chans;
+	if(numchannels == 1)
+		chans = ChannelConfig_Mono;
+	else if(numchannels == 2)
+		chans = ChannelConfig_Stereo;
+	else
+		return nullptr;
+	const SampleType stype{(sampletype == MusicSamplesFloat) ? SampleType_Float32 : SampleType_Int16};
+
+	auto stream = GSnd->CreateStream(cb, int(size), stype, chans, samplerate, userdata);
 	if (stream)
 	{
 		stream->Play(true, 1);
@@ -248,17 +254,14 @@ static bool FillStream(SoundStream* stream, void* buff, int len, void* userdata)
 void S_CreateStream()
 {
 	if (!mus_playing.handle) return;
-	SoundStreamInfo fmt;
-	ZMusic_GetStreamInfo(mus_playing.handle, &fmt);
-	// always create a floating point streaming buffer so we can apply replay gain without risk of integer overflows.
-	mus_playing.isfloat = fmt.mNumChannels > 0;
+	SoundStreamInfoEx fmt;
+	ZMusic_GetStreamInfoEx(mus_playing.handle, &fmt);
+	mus_playing.isfloat = fmt.mSampleType == SampleType_Float32;
 	if (!mus_playing.isfloat) fmt.mBufferSize *= 2;
 	if (fmt.mBufferSize > 0) // if buffer size is 0 the library will play the song itself (e.g. Windows system synth.)
 	{
-		int flags = SoundStream::Float;
-		if (abs(fmt.mNumChannels) < 2) flags |= SoundStream::Mono;
-
-		musicStream.reset(GSnd->CreateStream(FillStream, fmt.mBufferSize, flags, fmt.mSampleRate, nullptr));
+		// always create a floating point streaming buffer so we can apply replay gain without risk of integer overflows.
+		musicStream.reset(GSnd->CreateStream(FillStream, fmt.mBufferSize, SampleType_Float32, fmt.mChannelConfig, fmt.mSampleRate, nullptr));
 		if (musicStream) musicStream->Play(true, 1);
 	}
 }
@@ -599,16 +602,13 @@ static void CheckReplayGain(const char *musicname, EMidiDevice playertype, const
 		return; // unable to open
 	}
 
-	SoundStreamInfo fmt;
-	ZMusic_GetStreamInfo(handle, &fmt);
+	SoundStreamInfoEx fmt;
+	ZMusic_GetStreamInfoEx(handle, &fmt);
 	if (fmt.mBufferSize == 0)
 	{
 		ZMusic_Close(handle);
 		return; // external player.
 	}
-
-	int flags = SoundStream::Float;
-	if (abs(fmt.mNumChannels) < 2) flags |= SoundStream::Mono;
 
 	TArray<uint8_t> readbuffer(fmt.mBufferSize, true);
 	TArray<float> lbuffer;
@@ -617,7 +617,7 @@ static void CheckReplayGain(const char *musicname, EMidiDevice playertype, const
 	{
 		unsigned index;
 		// 4 cases, all with different preparation needs.
-		if (fmt.mNumChannels == -2) // 16 bit stereo
+		if (fmt.mSampleType == SampleType_Int16 && fmt.mChannelConfig == ChannelConfig_Stereo) // 16 bit stereo
 		{
 			int16_t* sbuf = (int16_t*)readbuffer.Data();
 			int numsamples = fmt.mBufferSize / 4;
@@ -630,7 +630,7 @@ static void CheckReplayGain(const char *musicname, EMidiDevice playertype, const
 				rbuffer[index + i] = sbuf[i * 2 + 1];
 			}
 		}
-		else if (fmt.mNumChannels == -1) // 16 bit mono
+		else if (fmt.mSampleType == SampleType_Int16 && fmt.mChannelConfig == ChannelConfig_Mono) // 16 bit mono
 		{
 			int16_t* sbuf = (int16_t*)readbuffer.Data();
 			int numsamples = fmt.mBufferSize / 2;
@@ -641,7 +641,7 @@ static void CheckReplayGain(const char *musicname, EMidiDevice playertype, const
 				lbuffer[index + i] = sbuf[i];
 			}
 		}
-		else if (fmt.mNumChannels == 1) // float mono
+		else if (fmt.mSampleType == SampleType_Float32 && fmt.mChannelConfig == ChannelConfig_Mono) // float mono
 		{
 			float* sbuf = (float*)readbuffer.Data();
 			int numsamples = fmt.mBufferSize / 4;
@@ -651,7 +651,7 @@ static void CheckReplayGain(const char *musicname, EMidiDevice playertype, const
 				lbuffer[index + i] = sbuf[i] * 32768.f;
 			}
 		}
-		else if (fmt.mNumChannels == 2) // float stereo
+		else if (fmt.mSampleType == SampleType_Float32 && fmt.mChannelConfig == ChannelConfig_Stereo) // float stereo
 		{
 			float* sbuf = (float*)readbuffer.Data();
 			int numsamples = fmt.mBufferSize / 8;
