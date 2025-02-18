@@ -65,6 +65,8 @@
 #include "g_input.h"
 #include "c_commandbuffer.h"
 #include "vm.h"
+#include "m_argv.h"
+#include "doomdef.h"
 
 #define LEFTMARGIN 8
 #define RIGHTMARGIN 8
@@ -109,6 +111,9 @@ DEFINE_GLOBAL(ConsoleState)
 static int TopLine, InsertLine;
 
 static void ClearConsole ();
+
+static FString* RefreshFile;
+static int RefreshInterval = 0;
 
 struct GameAtExit
 {
@@ -235,6 +240,8 @@ void C_InitConback(FTextureID fallback, bool tile, double brightness)
 void C_InitConsole (int width, int height, bool ingame)
 {
 	int cwidth, cheight;
+	const char *v;
+	int i;
 
 	vidactive = ingame;
 	if (CurrentConsoleFont != NULL)
@@ -250,6 +257,18 @@ void C_InitConsole (int width, int height, bool ingame)
 	CmdLine.ConCols = ConWidth / cwidth;
 
 	if (conbuffer == NULL) conbuffer = new FConsoleBuffer;
+
+	i = Args->CheckParm ("-refreshfile");
+	if (i > 0 && i < (int)Args->NumArgs() - 1)
+	{
+		RefreshFile = Args->GetArgList(i + 1);
+		RefreshInterval = TICRATE;
+		v = Args->CheckValue ("-refreshinterval");
+		if (v != NULL && (atoi(v) != 0))
+		{
+			RefreshInterval = atoi(v);
+		}
+	}
 }
 
 //==========================================================================
@@ -521,8 +540,30 @@ void C_NewModeAdjust ()
 int consoletic = 0;
 void C_Ticker()
 {
+	FileReader fr;
 	static int lasttic = 0;
+	long filesize = 1;
 	consoletic++;
+
+	if (RefreshInterval > 0 && (consoletic % RefreshInterval) == 0)
+	{
+		if (fr.OpenFile (RefreshFile->GetChars()))
+		{
+			auto length = fr.GetLength();
+			fr.Close();
+
+			if (length > 0)
+			{
+				C_ExecFile (RefreshFile->GetChars());
+
+				// Truncate the file
+				FileWriter fw;
+				if (fw.Open (RefreshFile->GetChars())) {
+					fw.Close ();
+				}
+			}
+		}
+	}
 
 	if (lasttic == 0)
 		lasttic = consoletic - 1;
