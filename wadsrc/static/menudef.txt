@@ -1348,6 +1348,8 @@ OptionMenu AutomapOptions protected
 	StaticText ""
 	Option "$AUTOMAPMNU_ROTATE",				"am_rotate", "RotateTypes"
 	Option "$AUTOMAPMNU_FOLLOW",				"am_followplayer", "OnOff"
+	Option "$AUTOMAPMNU_PATH",					"am_path", "OnOff"
+	Slider "$AUTOMAPMNU_PATHLENGTH",			"am_pathlength", 100, 10000, 100, 0
 	Option "$AUTOMAPMNU_OVERLAY",				"am_overlay", "OverlayTypes"
 	Option "$AUTOMAPMNU_TEXTURED",				"am_textured", "OnOff"
 	Slider "$AUTOMAPMNU_LINEALPHA",				"am_linealpha", 0.1, 1.0, 0.1, 1
@@ -1407,6 +1409,7 @@ OptionMenu MapControlsMenu protected
 	MapControl "$MAPCNTRLMNU_TOGGLEZOOM",		"am_gobig"
 	MapControl "$MAPCNTRLMNU_TOGGLEFOLLOW",		"am_togglefollow"
 	MapControl "$MAPCNTRLMNU_ROTATE",			"toggle am_rotate"
+	MapControl "$MAPCNTRLMNU_PATH",			    "toggle am_path"
 	MapControl "$MAPCNTRLMNU_TOGGLEGRID",		"am_togglegrid"
 	MapControl "$MAPCNTRLMNU_TOGGLETEXTURE",	"am_toggletexture"
 
@@ -1446,6 +1449,7 @@ OptionMenu MapColorMenu protected
 	ColorPicker "$MAPCOLORMNU_UNEXPLOREDSECRETCOLOR",	"am_unexploredsecretcolor"
 	ColorPicker "$MAPCOLORMNU_SPECIALWALLCOLOR",		"am_specialwallcolor"
 	ColorPicker "$MAPCOLORMNU_PORTAL",					"am_portalcolor"
+	ColorPicker "$MAPCOLORMNU_PATH",					"am_pathcolor"
 }
 
 OptionMenu MapColorMenuCheats protected
@@ -1477,6 +1481,7 @@ OptionMenu MapColorMenuOverlay protected
 	ColorPicker "$MAPCOLORMNU_UNEXPLOREDSECRETCOLOR",	"am_ovunexploredsecretcolor"
 	ColorPicker "$MAPCOLORMNU_SPECIALWALLCOLOR",		"am_ovspecialwallcolor"
 	ColorPicker "$MAPCOLORMNU_PORTAL",					"am_ovportalcolor"
+	ColorPicker "$MAPCOLORMNU_PATH",					"am_ovpathcolor"
 }
 
 OptionMenu MapColorMenuCheatsOverlay protected

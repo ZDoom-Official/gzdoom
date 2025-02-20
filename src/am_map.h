@@ -44,6 +44,9 @@ public:
 	// called instead of view drawer if automap active.
 	virtual void Drawer(int bottom) = 0;
 
+	// Used for am_path drawing to calculate distance between ticks.
+	DVector2 last_tick_pos;
+
 	virtual void NewResolution() = 0;
 	virtual void LevelInit() = 0;
 	virtual void UpdateShowAllLines() = 0;
