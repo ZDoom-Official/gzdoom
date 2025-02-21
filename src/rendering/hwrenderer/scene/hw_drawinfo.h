@@ -150,6 +150,7 @@ struct HWDrawInfo
 	Clipper *rClipper; // Radar clipper
 	FRenderViewpoint Viewpoint;
 	HWViewpointUniforms VPUniforms;	// per-viewpoint uniform state
+	VSMatrix ProjectionMatrix2;
 	TArray<HWPortal *> Portals;
 	TArray<HWDecal *> Decals[2];	// the second slot is for mirrors which get rendered in a separate pass.
 	TArray<HUDSprite> hudsprites;	// These may just be stored by value.

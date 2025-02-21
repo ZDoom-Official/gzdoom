@@ -1196,6 +1196,9 @@ enum
 	WALLF_ABSLIGHTING_BOTTOM 	= WALLF_ABSLIGHTING_TIER << 2,	// Bottom tier light is absolute instead of relative
 
 	WALLF_DITHERTRANS			= 8192,	// Render with dithering transparency shader (gets reset every frame)
+	WALLF_DITHERTRANS_TOP		= WALLF_DITHERTRANS << 0,	// Top tier (gets reset every frame)
+	WALLF_DITHERTRANS_MID		= WALLF_DITHERTRANS << 1,	// Mid tier (gets reset every frame)
+	WALLF_DITHERTRANS_BOTTOM	= WALLF_DITHERTRANS << 2,	// Bottom tier (gets reset every frame)
 };
 
 struct side_t
@@ -1270,6 +1273,8 @@ struct side_t
 	seg_t **segs;	// all segs belonging to this sidedef in ascending order. Used for precise rendering
 	int numsegs;
 	int sidenum;
+
+	int dithertranscount;
 
 	int GetLightLevel (bool foggy, int baselight, int which, bool is3dlight=false, int *pfakecontrast_usedbygzdoom=NULL) const;
 

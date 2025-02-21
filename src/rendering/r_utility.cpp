@@ -550,8 +550,12 @@ void R_InterpolateView(FRenderViewpoint& viewPoint, const player_t* const player
 			const int prevPortalGroup = viewLvl->PointInRenderSubsector(iView->Old.Pos)->sector->PortalGroup;
 			const int curPortalGroup = viewLvl->PointInRenderSubsector(iView->New.Pos)->sector->PortalGroup;
 
-			const DVector2 portalOffset = viewLvl->Displacements.getOffset(prevPortalGroup, curPortalGroup);
-			viewPoint.Pos = iView->Old.Pos * inverseTicFrac + (iView->New.Pos - portalOffset) * ticFrac;
+			if (viewPoint.IsAllowedOoB() && prevPortalGroup != curPortalGroup) viewPoint.Pos = iView->New.Pos;
+			else
+			{
+				const DVector2 portalOffset = viewLvl->Displacements.getOffset(prevPortalGroup, curPortalGroup);
+				viewPoint.Pos = iView->Old.Pos * inverseTicFrac + (iView->New.Pos - portalOffset) * ticFrac;
+			}
 			viewPoint.Path[0] = viewPoint.Path[1] = iView->New.Pos;
 		}
 	}
@@ -704,6 +708,21 @@ void FRenderViewpoint::SetViewAngle(const FViewWindow& viewWindow)
 	ViewVector.X = v.X;
 	ViewVector.Y = v.Y;
 	HWAngles.Yaw = FAngle::fromDeg(270.0 - Angles.Yaw.Degrees());
+	ViewVector3D.X = v.X * PitchCos;
+	ViewVector3D.Y = v.Y * PitchCos;
+	ViewVector3D.Z = -PitchSin;
+
+	if (IsOrtho() || IsAllowedOoB()) // These auto-ensure that camera and camera->ViewPos exist
+	{
+		if (camera->tracer != NULL)
+		{
+			OffPos = camera->tracer->Pos();
+		}
+		else
+		{
+			OffPos = Pos + ViewVector3D * camera->ViewPos->Offset.Length();
+		}
+	}
 
 	if (IsOrtho() && (camera->ViewPos->Offset.XY().Length() > 0.0))
 	{

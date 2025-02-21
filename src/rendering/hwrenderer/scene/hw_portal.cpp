@@ -125,6 +125,7 @@ bool FPortalSceneState::RenderFirstSkyPortal(int recursion, HWDrawInfo *outer_di
 {
 	HWPortal * best = nullptr;
 	unsigned bestindex = 0;
+	bool usestencil = outer_di->Viewpoint.IsAllowedOoB();
 
 	// Find the one with the highest amount of lines.
 	// Normally this is also the one that saves the largest amount
@@ -145,7 +146,7 @@ bool FPortalSceneState::RenderFirstSkyPortal(int recursion, HWDrawInfo *outer_di
 			}
 
 			// If the portal area contains the current camera viewpoint, let's always use it because it's likely to give the largest area.
-			if (p->boundingBox.contains(outer_di->Viewpoint.Pos))
+			if (p->boundingBox.contains(usestencil ? outer_di->Viewpoint.OffPos : outer_di->Viewpoint.Pos))
 			{
 				best = p;
 				bestindex = i;
@@ -157,7 +158,14 @@ bool FPortalSceneState::RenderFirstSkyPortal(int recursion, HWDrawInfo *outer_di
 	if (best)
 	{
 		portals.Delete(bestindex);
-		RenderPortal(best, state, false, outer_di);
+		if (usestencil && ((strcmp(best->GetName(), "Sky") == 0) || (strcmp(best->GetName(), "Skybox") == 0)))
+		{
+			tempmatrix = outer_di->VPUniforms.mProjectionMatrix; // ensure perspective projection matrix for skies
+			outer_di->VPUniforms.mProjectionMatrix = outer_di->ProjectionMatrix2;
+		}
+		RenderPortal(best, state, usestencil, outer_di);
+		if (usestencil && ((strcmp(best->GetName(), "Sky") == 0) || (strcmp(best->GetName(), "Skybox") == 0)))
+			outer_di->VPUniforms.mProjectionMatrix = tempmatrix;
 		delete best;
 		return true;
 	}
@@ -325,6 +333,7 @@ void HWPortal::RemoveStencil(HWDrawInfo *di, FRenderState &state, bool usestenci
 	bool needdepth = NeedDepthBuffer();
 
 	// Restore the old view
+
 	auto &vp = di->Viewpoint;
 	if (vp.camera != nullptr) vp.camera->renderflags = (vp.camera->renderflags & ~RF_MAYBEINVISIBLE) | savedvisibility;
 
@@ -410,20 +419,23 @@ void HWScenePortalBase::ClearClipper(HWDrawInfo *di, Clipper *clipper)
 
 	// Set the clipper to the minimal visible area
 	clipper->SafeAddClipRange(0, 0xffffffff);
+	auto outvp = outer_di->Viewpoint;
+	DVector3 outPos = clipper->amRadar ? outvp.OffPos : outvp.Pos;
+	angle_t padding = clipper->amRadar ? 0x00200000 : 0x00000000; // Make radar clipping more aggressive (reveal less)
 	for (unsigned int i = 0; i < lines.Size(); i++)
 	{
-		DAngle startAngle = (DVector2(lines[i].glseg.x2, lines[i].glseg.y2) - outer_di->Viewpoint.Pos).Angle() + angleOffset;
-		DAngle endAngle = (DVector2(lines[i].glseg.x1, lines[i].glseg.y1) - outer_di->Viewpoint.Pos).Angle() + angleOffset;
+		DAngle startAngle = (DVector2(lines[i].glseg.x2, lines[i].glseg.y2) - outPos).Angle() + angleOffset;
+		DAngle endAngle = (DVector2(lines[i].glseg.x1, lines[i].glseg.y1) - outPos).Angle() + angleOffset;
 
 		if (deltaangle(endAngle, startAngle) < nullAngle)
 		{
-			clipper->SafeRemoveClipRangeRealAngles(startAngle.BAMs(), endAngle.BAMs());
+			clipper->SafeRemoveClipRangeRealAngles(startAngle.BAMs() + padding, endAngle.BAMs() - padding);
 		}
 	}
 
 	// and finally clip it to the visible area
 	angle_t a1 = di->FrustumAngle();
-	if (a1 < ANGLE_180) clipper->SafeAddClipRangeRealAngles(di->Viewpoint.Angles.Yaw.BAMs() + a1, di->Viewpoint.Angles.Yaw.BAMs() - a1);
+	if (!clipper->amRadar && a1 < ANGLE_180) clipper->SafeAddClipRangeRealAngles(di->Viewpoint.Angles.Yaw.BAMs() + a1, di->Viewpoint.Angles.Yaw.BAMs() - a1);
 
 	// lock the parts that have just been clipped out.
 	clipper->SetSilhouette();
@@ -608,6 +620,8 @@ bool HWLineToLinePortal::Setup(HWDrawInfo *di, FRenderState &rstate, Clipper *cl
 	P_TranslatePortalZ(origin, vp.Pos.Z);
 	P_TranslatePortalXY(origin, vp.Path[0].X, vp.Path[0].Y);
 	P_TranslatePortalXY(origin, vp.Path[1].X, vp.Path[1].Y);
+	P_TranslatePortalXY(origin, vp.OffPos.X, vp.OffPos.Y);
+	P_TranslatePortalZ(origin, vp.OffPos.Z);
 	if (!vp.showviewer && vp.camera != nullptr && P_PointOnLineSidePrecise(vp.Path[0], glport->lines[0]->mDestination) != P_PointOnLineSidePrecise(vp.Path[1], glport->lines[0]->mDestination))
 	{
 		double distp = (vp.Path[0] - vp.Path[1]).Length();
@@ -791,10 +805,18 @@ bool HWSectorStackPortal::Setup(HWDrawInfo *di, FRenderState &rstate, Clipper *c
 	vp.Pos += origin->mDisplacement;
 	vp.ActorPos += origin->mDisplacement;
 	vp.ViewActor = nullptr;
+	vp.OffPos += origin->mDisplacement;
 
 	// avoid recursions!
 	if (origin->plane != -1) screen->instack[origin->plane]++;
-
+	if (lines.Size() > 0)
+	{
+		flat.plane.GetFromSector(lines[0].sub->sector,
+								 lines[0].sub->sector->GetPortal(sector_t::ceiling)->mType & (PORTS_STACKEDSECTORTHING | PORTS_PORTAL | PORTS_LINKEDPORTAL) ?
+								 sector_t::ceiling : sector_t::floor);
+		di->SetClipHeight(flat.plane.plane.ZatPoint(vp.Pos),
+						  flat.plane.plane.Normal().Z > 0 ? -1.f : 1.f);
+	}
 	di->SetupView(rstate, vp.Pos.X, vp.Pos.Y, vp.Pos.Z, !!(state->MirrorFlag & 1), !!(state->PlaneMirrorFlag & 1));
 	SetupCoverage(di);
 	ClearClipper(di, clipper);
@@ -802,12 +824,29 @@ bool HWSectorStackPortal::Setup(HWDrawInfo *di, FRenderState &rstate, Clipper *c
 	// If the viewpoint is not within the portal, we need to invalidate the entire clip area.
 	// The portal will re-validate the necessary parts when its subsectors get traversed.
 	subsector_t *sub = di->Level->PointInRenderSubsector(vp.Pos);
+	if (vp.IsAllowedOoB()) sub = di->Level->PointInRenderSubsector(vp.OffPos);
 	if (!(di->ss_renderflags[sub->Index()] & SSRF_SEEN))
 	{
 		clipper->SafeAddClipRange(0, ANGLE_MAX);
 		clipper->SetBlocked(true);
 	}
 	return true;
+}
+
+
+void HWSectorStackPortal::DrawPortalStencil(FRenderState &state, int pass)
+{
+	bool isceiling = planesused & (1 << sector_t::ceiling);
+	for (unsigned int i = 0; i < lines.Size(); i++)
+	{
+		flat.section = lines[i].sub->section;
+		flat.iboindex = lines[i].sub->sector->iboindex[isceiling ? sector_t::ceiling : sector_t::floor];
+		flat.plane.GetFromSector(lines[i].sub->sector, isceiling ? sector_t::ceiling : sector_t::floor);
+		// if (isceiling) flat.plane.plane.FlipVert(); // Doesn't do anything. Stencil is a screen-space projection
+
+		state.SetNormal(flat.plane.plane.Normal().X, flat.plane.plane.Normal().Z, flat.plane.plane.Normal().Y);
+		state.DrawIndexed(DT_Triangles, flat.iboindex + flat.section->vertexindex, flat.section->vertexcount, i == 0);
+	}
 }
 
 
@@ -858,11 +897,30 @@ bool HWPlaneMirrorPortal::Setup(HWDrawInfo *di, FRenderState &rstate, Clipper *c
 	state->PlaneMirrorFlag++;
 	di->SetClipHeight(planez, state->PlaneMirrorMode < 0 ? -1.f : 1.f);
 	di->SetupView(rstate, vp.Pos.X, vp.Pos.Y, vp.Pos.Z, !!(state->MirrorFlag & 1), !!(state->PlaneMirrorFlag & 1));
+	vp.ViewVector3D.Z = - vp.ViewVector3D.Z;
+	vp.OffPos.Z = 2 * planez - vp.OffPos.Z;
 	ClearClipper(di, clipper);
 
 	di->UpdateCurrentMapSection();
 	return true;
 }
+
+
+void HWPlaneMirrorPortal::DrawPortalStencil(FRenderState &state, int pass)
+{
+	bool isceiling = planesused & (1 << sector_t::ceiling);
+	for (unsigned int i = 0; i < lines.Size(); i++)
+	{
+		flat.section = lines[i].sub->section;
+		flat.iboindex = lines[i].sub->sector->iboindex[isceiling ? sector_t::ceiling : sector_t::floor];
+		flat.plane.GetFromSector(lines[i].sub->sector, isceiling ? sector_t::ceiling : sector_t::floor);
+		// if (isceiling) flat.plane.plane.FlipVert(); // Doesn't do anything. Stencil is a screen-space projection
+
+		state.SetNormal(flat.plane.plane.Normal().X, flat.plane.plane.Normal().Z, flat.plane.plane.Normal().Y);
+		state.DrawIndexed(DT_Triangles, flat.iboindex + flat.section->vertexindex, flat.section->vertexcount, i == 0);
+	}
+}
+
 
 void HWPlaneMirrorPortal::Shutdown(HWDrawInfo *di, FRenderState &rstate)
 {

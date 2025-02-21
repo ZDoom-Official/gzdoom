@@ -25,6 +25,8 @@ struct FRenderViewpoint
 	DRotator		Angles;			// Camera angles
 	FRotator		HWAngles;		// Actual rotation angles for the hardware renderer
 	DVector2		ViewVector;		// HWR only: direction the camera is facing.
+	DVector3		ViewVector3D;	// 3D direction the camera is facing.
+	DVector3        OffPos;         // Viewpoint position to use for Ortho and OoB calculations
 	AActor			*ViewActor;		// either the same as camera or nullptr
 	FLevelLocals	*ViewLevel;		// The level this viewpoint is on.
 

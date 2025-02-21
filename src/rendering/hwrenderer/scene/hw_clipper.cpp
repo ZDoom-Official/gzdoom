@@ -394,18 +394,10 @@ angle_t Clipper::PointToPseudoAngle(double x, double y)
 {
 	double vecx = x - viewpoint->Pos.X;
 	double vecy = y - viewpoint->Pos.Y;
-	if ((viewpoint->camera != NULL) && amRadar)
+	if (amRadar)
 	{
-		if (viewpoint->camera->tracer != NULL)
-		{
-			vecx = x - viewpoint->camera->tracer->X();
-			vecy = y - viewpoint->camera->tracer->Y();
-		}
-		else
-		{
-			vecx = x - viewpoint->camera->X();
-			vecy = y - viewpoint->camera->Y();
-		}
+		vecx = x - viewpoint->OffPos.X;
+		vecy = y - viewpoint->OffPos.Y;
 	}
 
 	if (vecx == 0 && vecy == 0)
@@ -467,7 +459,7 @@ angle_t Clipper::PointToPseudoPitch(double x, double y, double z)
 
 angle_t Clipper::PointToPseudoOrthoAngle(double x, double y)
 {
-	DVector3 disp = DVector3( x, y, 0 ) - viewpoint->camera->Pos();
+	DVector3 disp = DVector3(x, y, 0) - viewpoint->OffPos;
 	if (viewpoint->camera->ViewPos->Offset.XY().Length() == 0)
 	{
 		return AngleToPseudo( viewpoint->Angles.Yaw.BAMs() );
@@ -491,7 +483,7 @@ angle_t Clipper::PointToPseudoOrthoAngle(double x, double y)
 
 angle_t Clipper::PointToPseudoOrthoPitch(double x, double y, double z)
 {
-	DVector3 disp = DVector3( x, y, z ) - viewpoint->camera->Pos();
+	DVector3 disp = DVector3(x, y, z) - viewpoint->OffPos;
 	if (viewpoint->camera->ViewPos->Offset.XY().Length() > 0)
 	{
 		double yproj = viewpoint->PitchSin * disp.XY().Length() * deltaangle(disp.Angle(), viewpoint->Angles.Yaw).Cos();
