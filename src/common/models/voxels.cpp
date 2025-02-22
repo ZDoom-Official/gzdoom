@@ -320,6 +320,8 @@ FVoxelDef *R_LoadVoxelDef(int lumpnum, int spin)
 		voxdef->Scale = 1.;
 		voxdef->DroppedSpin = voxdef->PlacedSpin = spin;
 		voxdef->AngleOffset = DAngle::fromDeg(90.);
+		voxdef->PitchOffset = nullAngle;
+		voxdef->RollOffset = nullAngle;
 
 		Voxels.Push(vox);
 		VoxelDefs.Push(voxdef);

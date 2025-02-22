@@ -58,6 +58,8 @@ struct VoxelOptions
 	int			PlacedSpin = 0;
 	double		Scale = 1;
 	DAngle		AngleOffset = DAngle90;
+	DAngle		PitchOffset = nullAngle;
+	DAngle		RollOffset = nullAngle;
 	double		xoffset = 0.0;
 	double		yoffset = 0.0;
 	double		zoffset = 0.0;
@@ -179,6 +181,38 @@ static void VOX_ReadOptions(FScanner &sc, VoxelOptions &opts)
 				sc.TokenMustBe(TK_FloatConst);
 			}
 			opts.AngleOffset = DAngle::fromDeg(mul * sc.Float + 90.);
+		}
+		else if (sc.Compare("pitchoffset"))
+		{
+			int mul = 1;
+			sc.MustGetToken('=');
+			if (sc.CheckToken('-')) mul = -1;
+			sc.MustGetAnyToken();
+			if (sc.TokenType == TK_IntConst)
+			{
+				sc.Float = sc.Number;
+			}
+			else
+			{
+				sc.TokenMustBe(TK_FloatConst);
+			}
+			opts.PitchOffset = DAngle::fromDeg(mul * sc.Float);
+		}
+		else if (sc.Compare("rolloffset"))
+		{
+			int mul = 1;
+			sc.MustGetToken('=');
+			if (sc.CheckToken('-')) mul = -1;
+			sc.MustGetAnyToken();
+			if (sc.TokenType == TK_IntConst)
+			{
+				sc.Float = sc.Number;
+			}
+			else
+			{
+				sc.TokenMustBe(TK_FloatConst);
+			}
+			opts.RollOffset = DAngle::fromDeg(mul * sc.Float);
 		}
 		else if (sc.Compare("xoffset"))
 		{
@@ -313,6 +347,8 @@ void R_InitVoxels()
 				def->DroppedSpin = opts.DroppedSpin;
 				def->PlacedSpin = opts.PlacedSpin;
 				def->AngleOffset = opts.AngleOffset;
+				def->PitchOffset = opts.PitchOffset;
+				def->RollOffset = opts.RollOffset;
 				def->xoffset = opts.xoffset;
 				def->yoffset = opts.yoffset;
 				def->zoffset = opts.zoffset;

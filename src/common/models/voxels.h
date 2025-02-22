@@ -73,6 +73,8 @@ struct FVoxelDef
 	int VoxeldefIndex;		// Needed by GZDoom
 	double		Scale;
 	DAngle		AngleOffset;// added to actor's angle to compensate for wrong-facing voxels
+	DAngle		PitchOffset;
+	DAngle		RollOffset;
 	double		xoffset;
 	double		yoffset;
 	double		zoffset;

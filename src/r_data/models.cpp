@@ -183,8 +183,16 @@ void RenderModel(FModelRenderer *renderer, float x, float y, float z, FSpriteMod
 
 	// 5) Applying model rotations.
 	objectToWorldMatrix.rotate(-smf->angleoffset, 0, 1, 0);
-	objectToWorldMatrix.rotate(smf->pitchoffset, 0, 0, 1);
-	objectToWorldMatrix.rotate(-smf->rolloffset, 1, 0, 0);
+	if (!smf->isVoxel)
+	{
+		objectToWorldMatrix.rotate(smf->pitchoffset, 0, 0, 1);
+		objectToWorldMatrix.rotate(-smf->rolloffset, 1, 0, 0);
+	}
+	else
+	{
+		objectToWorldMatrix.rotate(-smf->pitchoffset, 1, 0, 0);
+		objectToWorldMatrix.rotate(smf->rolloffset, 0, 0, 1);
+	}
 
 	if (!(smf_flags & MDL_CORRECTPIXELSTRETCH) && smf->modelIDs.Size() > 0)
 	{
@@ -247,8 +255,16 @@ void RenderHUDModel(FModelRenderer *renderer, DPSprite *psp, FVector3 translatio
 
 	// Applying angleoffset, pitchoffset, rolloffset.
 	objectToWorldMatrix.rotate(-smf->angleoffset, 0, 1, 0);
-	objectToWorldMatrix.rotate(smf->pitchoffset, 0, 0, 1);
-	objectToWorldMatrix.rotate(-smf->rolloffset, 1, 0, 0);
+	if (!smf->isVoxel)
+	{
+		objectToWorldMatrix.rotate(smf->pitchoffset, 0, 0, 1);
+		objectToWorldMatrix.rotate(-smf->rolloffset, 1, 0, 0);
+	}
+	else
+	{
+		objectToWorldMatrix.rotate(-smf->pitchoffset, 1, 0, 0);
+		objectToWorldMatrix.rotate(smf->rolloffset, 0, 0, 1);
+	}
 
 	float orientation = smf->xscale * smf->yscale * smf->zscale;
 
@@ -601,11 +617,13 @@ void InitModels()
 		smf.animationIDs[0] = -1;
 		smf.xscale = smf.yscale = smf.zscale = VoxelDefs[i]->Scale;
 		smf.angleoffset = VoxelDefs[i]->AngleOffset.Degrees();
+		smf.pitchoffset = VoxelDefs[i]->PitchOffset.Degrees();
+		smf.rolloffset = VoxelDefs[i]->RollOffset.Degrees();
 		smf.xoffset = VoxelDefs[i]->xoffset;
 		smf.yoffset = VoxelDefs[i]->yoffset;
 		smf.zoffset = VoxelDefs[i]->zoffset;
 		// this helps catching uninitialized data.
-		assert(VoxelDefs[i]->PitchFromMomentum == true || VoxelDefs[i]->PitchFromMomentum == false);
+		//assert(VoxelDefs[i]->PitchFromMomentum == true || VoxelDefs[i]->PitchFromMomentum == false);
 		if (VoxelDefs[i]->PitchFromMomentum) smf.flags |= MDL_PITCHFROMMOMENTUM;
 		if (VoxelDefs[i]->UseActorPitch) smf.flags |= MDL_USEACTORPITCH;
 		if (VoxelDefs[i]->UseActorRoll) smf.flags |= MDL_USEACTORROLL;
