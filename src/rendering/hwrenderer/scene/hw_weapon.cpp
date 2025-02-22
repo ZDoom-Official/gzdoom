@@ -305,7 +305,7 @@ static FVector2 BobWeapon3D(WeaponPosition3D &weap, DPSprite *psp, FVector3 &tra
 //
 //==========================================================================
 
-WeaponLighting HWDrawInfo::GetWeaponLighting(sector_t *viewsector, const DVector3 &pos, int cm, area_t in_area, const DVector3 &playerpos)
+WeaponLighting HWDrawInfo::GetWeaponLighting(sector_t *viewsector, const DVector3 &pos, int cm, area_t in_area, const DVector3 &playerpos, bool isModel)
 {
 	WeaponLighting l;
 
@@ -353,7 +353,7 @@ WeaponLighting HWDrawInfo::GetWeaponLighting(sector_t *viewsector, const DVector
 			if (Level->flags3 & LEVEL3_NOCOLOREDSPRITELIGHTING) l.cm.ClearColor();
 		}
 
-		l.lightlevel = CalcLightLevel(lightmode, l.lightlevel, getExtraLight(), true, 0);
+		l.lightlevel = CalcLightLevel(lightmode, l.lightlevel, getExtraLight(), true, 0, isModel);
 
 		if (isSoftwareLighting(lightmode) || l.lightlevel < 92)
 		{
@@ -765,7 +765,7 @@ void HWDrawInfo::PreparePlayerSprites3D(sector_t * viewsector, area_t in_area)
 	AActor *camera = vp.camera;
 
 	WeaponPosition3D weap = GetWeaponPosition3D(camera->player, vp.TicFrac);
-	WeaponLighting light = GetWeaponLighting(viewsector, vp.Pos, isFullbrightScene(), in_area, camera->Pos());
+	WeaponLighting light = GetWeaponLighting(viewsector, vp.Pos, isFullbrightScene(), in_area, camera->Pos(), true);
 
 	VMFunction * ModifyBobLayer3D = nullptr;
 	VMFunction * ModifyBobPivotLayer3D = nullptr;

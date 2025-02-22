@@ -76,7 +76,7 @@ CUSTOM_CVAR(Int, gl_distfog, 70, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 //
 //==========================================================================
 
-int CalcLightLevel(ELightMode lightmode, int lightlevel, int rellight, bool weapon, int blendfactor)
+int CalcLightLevel(ELightMode lightmode, int lightlevel, int rellight, bool weapon, int blendfactor, bool isModel)
 {
 	int light;
 
@@ -106,7 +106,10 @@ int CalcLightLevel(ELightMode lightmode, int lightlevel, int rellight, bool weap
 	}
 	else
 	{
+		// if (!isModel)
 		light=lightlevel+rellight;
+		// else
+		// light=????????;
 	}
 
 	// Fake contrast should never turn a positive value into 0.

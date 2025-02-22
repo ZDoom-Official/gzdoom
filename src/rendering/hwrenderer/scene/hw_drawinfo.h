@@ -210,7 +210,7 @@ private:
 	int SetupLightsForOtherPlane(subsector_t * sub, FDynLightData &lightdata, const secplane_t *plane);
 	int CreateOtherPlaneVertices(subsector_t *sub, const secplane_t *plane);
 	void DrawPSprite(HUDSprite *huds, FRenderState &state);
-	WeaponLighting GetWeaponLighting(sector_t *viewsector, const DVector3 &pos, int cm, area_t in_area, const DVector3 &playerpos);
+	WeaponLighting GetWeaponLighting(sector_t *viewsector, const DVector3 &pos, int cm, area_t in_area, const DVector3 &playerpos, bool isModel = false);
 
 	void PreparePlayerSprites2D(sector_t * viewsector, area_t in_area);
 	void PreparePlayerSprites3D(sector_t * viewsector, area_t in_area);
@@ -351,7 +351,7 @@ inline bool isDarkLightMode(ELightMode lightmode)
 	return lightmode == ELightMode::Doom || lightmode == ELightMode::DoomDark;
 }
 
-int CalcLightLevel(ELightMode lightmode, int lightlevel, int rellight, bool weapon, int blendfactor);
+int CalcLightLevel(ELightMode lightmode, int lightlevel, int rellight, bool weapon, int blendfactor, bool isModel = false);
 PalEntry CalcLightColor(ELightMode lightmode, int light, PalEntry pe, int blendfactor);
 float GetFogDensity(FLevelLocals* Level, ELightMode lightmode, int lightlevel, PalEntry fogcolor, int sectorfogdensity, int blendfactor);
 bool CheckFog(FLevelLocals* Level, sector_t* frontsector, sector_t* backsector, ELightMode lightmode);
