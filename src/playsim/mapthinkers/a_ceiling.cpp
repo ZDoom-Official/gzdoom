@@ -72,6 +72,31 @@ void DCeiling::Serialize(FSerializer &arc)
 		.Enum("crushmode", m_CrushMode);
 }
 
+DEFINE_FIELD(DCeiling, m_Type)
+DEFINE_FIELD(DCeiling, m_BottomHeight)
+DEFINE_FIELD(DCeiling, m_TopHeight)
+DEFINE_FIELD(DCeiling, m_Speed)
+DEFINE_FIELD(DCeiling, m_Speed1)
+DEFINE_FIELD(DCeiling, m_Speed2)
+DEFINE_FIELD(DCeiling, m_Silent)
+DEFINE_FIELD(DCeiling, m_CrushMode)
+
+DEFINE_ACTION_FUNCTION(DCeiling, getCrush)
+{
+	PARAM_SELF_PROLOGUE(DCeiling);
+	ACTION_RETURN_INT(self->getCrush());
+}
+DEFINE_ACTION_FUNCTION(DCeiling, getDirection)
+{
+	PARAM_SELF_PROLOGUE(DCeiling);
+	ACTION_RETURN_INT(self->getDirection());
+}
+DEFINE_ACTION_FUNCTION(DCeiling, getOldDirection)
+{
+	PARAM_SELF_PROLOGUE(DCeiling);
+	ACTION_RETURN_INT(self->getOldDirection());
+}
+
 //============================================================================
 //
 // 

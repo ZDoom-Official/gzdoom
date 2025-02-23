@@ -105,6 +105,13 @@ public:
 		elevateLower
 	};
 
+	EElevator	m_Type;
+	int			m_Direction;
+	double		m_FloorDestDist;
+	double		m_CeilingDestDist;
+	double		m_Speed;
+
+
 	void Construct(sector_t *sec);
 
 	void OnDestroy() override;
@@ -112,11 +119,6 @@ public:
 	void Tick ();
 
 protected:
-	EElevator	m_Type;
-	int			m_Direction;
-	double		m_FloorDestDist;
-	double		m_CeilingDestDist;
-	double		m_Speed;
 	TObjPtr<DInterpolation*> m_Interp_Ceiling;
 	TObjPtr<DInterpolation*> m_Interp_Floor;
 

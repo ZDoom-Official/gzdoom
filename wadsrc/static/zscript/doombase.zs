@@ -643,11 +643,107 @@ class SectorEffect : Thinker native
 class Mover : SectorEffect native
 {}
 
+class Elevator : Mover native
+{
+	enum EElevator
+	{
+		elevateUp,
+		elevateDown,
+		elevateCurrent,
+		// [RH] For FloorAndCeiling_Raise/Lower
+		elevateRaise,
+		elevateLower
+	};
+
+	native readonly EElevator	m_Type;
+	native readonly int			m_Direction;
+	native readonly double		m_FloorDestDist;
+	native readonly double		m_CeilingDestDist;
+	native readonly double		m_Speed;
+}
+
 class MovingFloor : Mover native
 {}
 
+class Plat : MovingFloor native
+{
+	enum EPlatState
+	{
+		up,
+		down,
+		waiting,
+		in_stasis
+	};
+
+	enum EPlatType
+	{
+		platPerpetualRaise,
+		platDownWaitUpStay,
+		platDownWaitUpStayStone,
+		platUpWaitDownStay,
+		platUpNearestWaitDownStay,
+		platDownByValue,
+		platUpByValue,
+		platUpByValueStay,
+		platRaiseAndStay,
+		platToggle,
+		platDownToNearestFloor,
+		platDownToLowestCeiling,
+		platRaiseAndStayLockout,
+	};
+
+	bool IsLift() const { return m_Type == platDownWaitUpStay || m_Type == platDownWaitUpStayStone; }
+
+	native readonly double m_Speed;
+	native readonly double m_Low;
+	native readonly double m_High;
+	native readonly int m_Wait;
+	native readonly int m_Count;
+	native readonly EPlatState m_Status;
+	native readonly EPlatState m_OldStatus;
+	native readonly int m_Crush;
+	native readonly int m_Tag;
+	native readonly EPlatType m_Type;
+}
+
 class MovingCeiling : Mover native
 {}
+
+class Door : MovingCeiling native
+{
+	enum EVlDoor
+	{
+		doorClose,
+		doorOpen,
+		doorRaise,
+		doorWaitRaise,
+		doorCloseWaitOpen,
+		doorWaitClose,
+	};
+
+	native readonly EVlDoor	m_Type;
+	native readonly double	m_TopDist;
+	native readonly double	m_BotDist, m_OldFloorDist;
+	native readonly Vertex	m_BotSpot;
+	native readonly double	m_Speed;
+	
+	// 1 = up, 0 = waiting at top, -1 = down
+	enum EDirection
+	{
+		dirDown = -1,
+		dirWait,
+		dirUp,
+	}
+	native readonly int		m_Direction;
+
+	// tics to wait at the top
+	native readonly int		m_TopWait;
+	// (keep in case a door going down is reset)
+	// when it reaches 0, start going down
+	native readonly int		m_TopCountdown;
+
+	native readonly int		m_LightTag;
+}
 
 class Floor : MovingFloor native
 {
@@ -690,6 +786,37 @@ class Floor : MovingFloor native
 		genFloorChgT,
 		genFloorChg
 	};
+
+	enum EStair
+	{
+		buildUp,
+		buildDown
+	};
+
+	enum EStairType
+	{
+		stairUseSpecials = 1,
+		stairSync = 2,
+		stairCrush = 4,
+	};
+	
+	native readonly EFloor			m_Type;
+	native readonly int				m_Crush;
+	native readonly bool			m_Hexencrush;
+	native readonly bool			m_Instant;
+	native readonly int				m_Direction;
+	native readonly SecSpecial		m_NewSpecial;
+	native readonly TextureID		m_Texture;
+	native readonly double			m_FloorDestDist;
+	native readonly double			m_Speed;
+
+	// [RH] New parameters used to reset and delay stairs
+	native readonly double			m_OrgDist;
+	native readonly int				m_ResetCount;
+	native readonly int				m_Delay;
+	native readonly int				m_PauseTime;
+	native readonly int				m_StepTime;
+	native readonly int				m_PerStepTime;
 
 	deprecated("3.8", "Use Level.CreateFloor() instead") static bool CreateFloor(sector sec, int floortype, line ln, double speed, double height = 0, int crush = -1, int change = 0, bool crushmode = false, bool hereticlower = false)
 	{
@@ -736,7 +863,29 @@ class Ceiling : MovingCeiling native
 		crushHexen = 1,
 		crushSlowdown = 2
 	}
-	
+
+	// 1 = up, 0 = waiting, -1 = down
+	enum EDirection
+	{
+		dirDown = -1,
+		dirWait,
+		dirUp,
+	}
+
+	native readonly ECeiling	m_Type;
+	native readonly double	 	m_BottomHeight;
+	native readonly double	 	m_TopHeight;
+	native readonly double	 	m_Speed;
+	native readonly double		m_Speed1;		// [RH] dnspeed of crushers
+	native readonly double		m_Speed2;		// [RH] upspeed of crushers
+	native readonly ECrushMode	m_CrushMode;
+	native readonly int			m_Silent;
+
+	bool IsCrusher() const { return m_Type == ceilCrushAndRaise || m_Type == ceilLowerAndCrush || m_Type == ceilCrushRaiseAndStay; }
+	native int getCrush() const;
+	native int getDirection() const;
+	native int getOldDirection() const;
+
 	deprecated("3.8", "Use Level.CreateCeiling() instead") static bool CreateCeiling(sector sec, int type, line ln, double speed, double speed2, double height = 0, int crush = -1, int silent = 0, int change = 0, int crushmode = crushDoom)
 	{
 		return level.CreateCeiling(sec, type, ln, speed, speed2, height, crush, silent, change, crushmode);

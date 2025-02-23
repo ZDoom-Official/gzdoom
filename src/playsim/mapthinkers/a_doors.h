@@ -17,16 +17,10 @@ public:
 		doorWaitClose,
 	};
 
-	void Construct(sector_t *sector);
-	void Construct(sector_t *sec, EVlDoor type, double speed, int delay, int lightTag, int topcountdown);
-
-	void Serialize(FSerializer &arc);
-	void Tick ();
-protected:
 	EVlDoor		m_Type;
 	double	 	m_TopDist;
 	double		m_BotDist, m_OldFloorDist;
-	vertex_t	*m_BotSpot;
+	vertex_t* m_BotSpot;
 	double	 	m_Speed;
 
 	// 1 = up, 0 = waiting at top, -1 = down
@@ -40,6 +34,12 @@ protected:
 
 	int			m_LightTag;
 
+	void Construct(sector_t *sector);
+	void Construct(sector_t *sec, EVlDoor type, double speed, int delay, int lightTag, int topcountdown);
+
+	void Serialize(FSerializer &arc);
+	void Tick ();
+protected:
 	void DoorSound (bool raise, class DSeqNode *curseq=NULL) const;
 
 private:

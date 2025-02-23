@@ -36,6 +36,7 @@
 #include "serializer.h"
 #include "p_spec.h"
 #include "g_levellocals.h"
+#include "vm.h"
 
 static FRandom pr_doplat ("DoPlat");
 
@@ -61,6 +62,17 @@ void DPlat::Serialize(FSerializer &arc)
 		("crush", m_Crush)
 		("tag", m_Tag);
 }
+
+DEFINE_FIELD(DPlat, m_Type)
+DEFINE_FIELD(DPlat, m_Speed)
+DEFINE_FIELD(DPlat, m_Low)
+DEFINE_FIELD(DPlat, m_High)
+DEFINE_FIELD(DPlat, m_Wait)
+DEFINE_FIELD(DPlat, m_Count)
+DEFINE_FIELD(DPlat, m_Status)
+DEFINE_FIELD(DPlat, m_OldStatus)
+DEFINE_FIELD(DPlat, m_Crush)
+DEFINE_FIELD(DPlat, m_Tag)
 
 //-----------------------------------------------------------------------------
 //

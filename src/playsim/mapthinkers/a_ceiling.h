@@ -47,6 +47,14 @@ public:
 		crushSlowdown = 2
 	};
 
+	ECeiling	m_Type;
+	double	 	m_BottomHeight;
+	double	 	m_TopHeight;
+	double	 	m_Speed;
+	double		m_Speed1;		// [RH] dnspeed of crushers
+	double		m_Speed2;		// [RH] upspeed of crushers
+	ECrushMode	m_CrushMode;
+	int			m_Silent;
 
 	void Construct(sector_t *sec);
 	void Construct(sector_t *sec, double speed1, double speed2, int silent);
@@ -56,17 +64,10 @@ public:
 
 	int getCrush() const { return m_Crush; }
 	int getDirection() const { return m_Direction; }
+	int getOldDirection() const { return m_OldDirection; }
 
 protected:
-	ECeiling	m_Type;
-	double	 	m_BottomHeight;
-	double	 	m_TopHeight;
-	double	 	m_Speed;
-	double		m_Speed1;		// [RH] dnspeed of crushers
-	double		m_Speed2;		// [RH] upspeed of crushers
 	int 		m_Crush;
-	ECrushMode	m_CrushMode;
-	int			m_Silent;
 	int 		m_Direction;	// 1 = up, 0 = waiting, -1 = down
 
 	// [RH] Need these for BOOM-ish transferring ceilings
