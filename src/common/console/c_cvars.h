@@ -677,7 +677,7 @@ inline FBaseCVar *cvar_forceset (const char *var_name, const uint8_t *value) { r
 
 constexpr UCVarValue::UCVarValue(FIntCVarRef& v) : Pointer(&v) { }
 
-struct FCVarDecl
+struct FCVarDecl : FAutoSegEntry<FCVarDecl>
 {
 	void * refAddr;
 	ECVarType type;
@@ -686,6 +686,9 @@ struct FCVarDecl
 	UCVarValue defaultval;
 	const char *description;
 	void* callbackp; // actually a function pointer with unspecified arguments. C++ does not like that much...
+
+	FCVarDecl(void * r, ECVarType t, unsigned int f, const char * n, UCVarValue v, const char * d, void * c)
+	: FAutoSegEntry(AutoSegs::CVarDecl, this), refAddr(r), type(t), flags(f), name(n), defaultval(v), description(d), callbackp(c) {}
 };
 
 
@@ -695,23 +698,10 @@ void C_RestoreCVars (void);
 
 void C_ForgetCVars (void);
 
-
-#if defined(_MSC_VER)
-#pragma section(SECTION_VREG,read)
-
-#define MSVC_VSEG __declspec(allocate(SECTION_VREG))
-#define GCC_VSEG
-#else
-#define MSVC_VSEG
-#define GCC_VSEG __attribute__((section(SECTION_VREG))) __attribute__((used))
-#endif
-
 #define CUSTOM_CVAR(type,name,def,flags) \
 	static void cvarfunc_##name(F##type##CVar &); \
 	F##type##CVarRef name; \
 	static FCVarDecl cvardecl_##name = { &name, CVAR_##type, (flags), #name, CVarValue<CVAR_##type>(def), nullptr, reinterpret_cast<void*>(cvarfunc_##name) }; \
-	extern FCVarDecl const *const cvardeclref_##name; \
-	MSVC_VSEG FCVarDecl const *const cvardeclref_##name GCC_VSEG = &cvardecl_##name; \
 	static void cvarfunc_##name(F##type##CVar &self)
 
 
@@ -719,15 +709,11 @@ void C_ForgetCVars (void);
 	static void cvarfunc_##name(F##type##CVar &); \
 	F##type##CVarRef name; \
 	static FCVarDecl cvardecl_##name = { &name, CVAR_##type, (flags), #cname, CVarValue<CVAR_##type>(def), nullptr, reinterpret_cast<void*>(cvarfunc_##name) }; \
-	extern FCVarDecl const *const cvardeclref_##name; \
-	MSVC_VSEG FCVarDecl const *const cvardeclref_##name GCC_VSEG = &cvardecl_##name; \
 	static void cvarfunc_##name(F##type##CVar &self)
 
 #define CVAR(type,name,def,flags) \
 	F##type##CVarRef name; \
-	static FCVarDecl cvardecl_##name = { &name, CVAR_##type, (flags), #name, CVarValue<CVAR_##type>(def), nullptr, nullptr}; \
-	extern FCVarDecl const *const cvardeclref_##name; \
-	MSVC_VSEG FCVarDecl const *const cvardeclref_##name GCC_VSEG = &cvardecl_##name;
+	static FCVarDecl cvardecl_##name = { &name, CVAR_##type, (flags), #name, CVarValue<CVAR_##type>(def), nullptr, nullptr};
 
 #define EXTERN_CVAR(type,name) extern F##type##CVarRef name;
 
@@ -735,20 +721,14 @@ void C_ForgetCVars (void);
 	static void cvarfunc_##name(F##type##CVar &); \
 	F##type##CVarRef name; \
 	static FCVarDecl cvardecl_##name = { &name, CVAR_##type, (flags), #name, CVarValue<CVAR_##type>(def), descr, reinterpret_cast<void*>(cvarfunc_##name) }; \
-	extern FCVarDecl const *const cvardeclref_##name; \
-	MSVC_VSEG FCVarDecl const *const cvardeclref_##name GCC_VSEG = &cvardecl_##name; \
 	static void cvarfunc_##name(F##type##CVar &self)
 
 #define CVARD(type,name,def,flags, descr) \
 	F##type##CVarRef name; \
-	static FCVarDecl cvardecl_##name = { &name, CVAR_##type, (flags), #name, CVarValue<CVAR_##type>(def), descr, nullptr}; \
-	extern FCVarDecl const *const cvardeclref_##name; \
-	MSVC_VSEG FCVarDecl const *const cvardeclref_##name GCC_VSEG = &cvardecl_##name;
+	static FCVarDecl cvardecl_##name = { &name, CVAR_##type, (flags), #name, CVarValue<CVAR_##type>(def), descr, nullptr};
 
 #define CVARD_NAMED(type,name,varname,def,flags, descr) \
 	F##type##CVarRef name; \
-	static FCVarDecl cvardecl_##name = { &name, CVAR_##type, (flags), #varname, CVarValue<CVAR_##type>(def), descr, nullptr}; \
-	extern FCVarDecl const *const cvardeclref_##name; \
-	MSVC_VSEG FCVarDecl const *const cvardeclref_##name GCC_VSEG = &cvardecl_##name;
+	static FCVarDecl cvardecl_##name = { &name, CVAR_##type, (flags), #varname, CVarValue<CVAR_##type>(def), descr, nullptr};
 
 #endif //__C_CVARS_H__

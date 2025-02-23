@@ -54,13 +54,13 @@
 #define NO_SANITIZE_M
 #endif
 
-class FAutoSeg
-{
-	const char *name;
-	void **begin;
-	void **end;
+#include <tarray.h>
 
-	template <typename T>
+template<typename T>
+class FAutoSeg
+{ // register things automatically without segment hackery
+
+	template <typename T2>
 	struct ArgumentType;
 
 	template <typename Ret, typename Func, typename Arg>
@@ -90,94 +90,56 @@ class FAutoSeg
 	template <typename Func, typename Ret>
 	static constexpr bool HasReturnTypeV = HasReturnType<Func, Ret>::Value;
 
-	void Initialize();
-
 public:
-	explicit FAutoSeg(const char *name)
-	: name(name)
-	, begin(nullptr)
-	, end(nullptr)
-	{
-		Initialize();
-	}
-
-	FAutoSeg(void** begin, void** end)
-	: name(nullptr)
-	, begin(begin)
-	, end(end)
-	{
-	}
+	TArray<T*> fields {TArray<T*>::NoInit}; // skip constructor for fields, globals are zero-initialized, so this is fine
 
 	template <typename Func>
-	void NO_SANITIZE_M ForEach(Func func, std::enable_if_t<HasReturnTypeV<Func, void>> * = nullptr)
+	void ForEach(Func func, std::enable_if_t<HasReturnTypeV<Func, void>> * = nullptr)
 	{
-		using CallableType = decltype(&Func::operator());
-		using ArgType = typename ArgumentType<CallableType>::Type;
-
-		for (void **it = begin; it < end; ++it)
+		for (T * elem : fields)
 		{
-			if (intptr_t(it) > 0xffff && *it && intptr_t(*it) > 0xffff)
-			{
-				func(reinterpret_cast<ArgType>(*it));
-			}
+			func(elem);
 		}
 	}
 
 	template <typename Func>
-	void NO_SANITIZE_M ForEach(Func func, std::enable_if_t<HasReturnTypeV<Func, bool>> * = nullptr)
+	void ForEach(Func func, std::enable_if_t<HasReturnTypeV<Func, bool>> * = nullptr)
 	{
-		using CallableType = decltype(&Func::operator());
-		using ArgType = typename ArgumentType<CallableType>::Type;
-
-		for (void **it = begin; it < end; ++it)
+		for (T * elem : fields)
 		{
-			if (intptr_t(it) > 0xffff && *it && intptr_t(*it) > 0xffff)
+			if (!func(elem))
 			{
-				if (!func(reinterpret_cast<ArgType>(*it)))
-				{
-					return;
-				};
+				return;
 			}
 		}
 	}
 };
 
+template<typename T>
+struct FAutoSegEntry
+{
+	FAutoSegEntry(FAutoSeg<T> &seg, T* value)
+	{
+		seg.fields.push_back(value);
+	}
+};
+
+struct AFuncDesc;
+struct FieldDesc;
+struct ClassReg;
+struct FPropertyInfo;
+struct FMapOptInfo;
+struct FCVarDecl;
+
 namespace AutoSegs
 {
-	extern FAutoSeg ActionFunctons;
-	extern FAutoSeg TypeInfos;
-	extern FAutoSeg ClassFields;
-	extern FAutoSeg Properties;
-	extern FAutoSeg MapInfoOptions;
-	extern FAutoSeg CVarDecl;
+	extern FAutoSeg<AFuncDesc> ActionFunctons;
+	extern FAutoSeg<FieldDesc> ClassFields;
+	extern FAutoSeg<ClassReg> TypeInfos;
+	extern FAutoSeg<FPropertyInfo> Properties;
+	extern FAutoSeg<FMapOptInfo> MapInfoOptions;
+	extern FAutoSeg<FCVarDecl> CVarDecl;
 }
 
-#define AUTOSEG_AREG areg
-#define AUTOSEG_CREG creg
-#define AUTOSEG_FREG freg
-#define AUTOSEG_GREG greg
-#define AUTOSEG_YREG yreg
-#define AUTOSEG_VREG vreg
-
-#define AUTOSEG_STR(string) AUTOSEG_STR2(string)
-#define AUTOSEG_STR2(string) #string
-
-#ifdef __MACH__
-#define AUTOSEG_MACH_SEGMENT "__DATA"
-#define AUTOSEG_MACH_SECTION(section) AUTOSEG_MACH_SEGMENT "," AUTOSEG_STR(section)
-#define SECTION_AREG AUTOSEG_MACH_SECTION(AUTOSEG_AREG)
-#define SECTION_CREG AUTOSEG_MACH_SECTION(AUTOSEG_CREG)
-#define SECTION_FREG AUTOSEG_MACH_SECTION(AUTOSEG_FREG)
-#define SECTION_GREG AUTOSEG_MACH_SECTION(AUTOSEG_GREG)
-#define SECTION_YREG AUTOSEG_MACH_SECTION(AUTOSEG_YREG)
-#define SECTION_VREG AUTOSEG_MACH_SECTION(AUTOSEG_VREG)
-#else
-#define SECTION_AREG AUTOSEG_STR(AUTOSEG_AREG)
-#define SECTION_CREG AUTOSEG_STR(AUTOSEG_CREG)
-#define SECTION_FREG AUTOSEG_STR(AUTOSEG_FREG)
-#define SECTION_GREG AUTOSEG_STR(AUTOSEG_GREG)
-#define SECTION_YREG AUTOSEG_STR(AUTOSEG_YREG)
-#define SECTION_VREG AUTOSEG_STR(AUTOSEG_VREG)
-#endif
 
 #endif

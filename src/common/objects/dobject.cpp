@@ -61,7 +61,6 @@ ClassReg DObject::RegistrationInfo =
 	nullptr,
 	sizeof(DObject),						// SizeOf
 };
-_DECLARE_TI(DObject)
 
 // This bit is needed in the playsim - but give it a less crappy name.
 DEFINE_FIELD_BIT(DObject,ObjectFlags, bDestroyed, OF_EuthanizeMe)

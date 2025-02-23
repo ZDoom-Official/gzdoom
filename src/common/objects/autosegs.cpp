@@ -42,103 +42,11 @@
 ** compile with something other than Visual C++ or GCC.
 */
 
-#include <cassert>
 #include "autosegs.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#include <dbghelp.h>
-#elif defined __MACH__
-#include <mach-o/getsect.h>
-#include <mach-o/ldsyms.h>
-#endif
-
-
-#if defined _WIN32 || defined __MACH__
-
-#define AUTOSEG_VARIABLE(name, autoseg) namespace AutoSegs{ FAutoSeg name{ AUTOSEG_STR(autoseg) }; }
-
-#else // Linux and others with ELF executables
-
-#define AUTOSEG_START(name) __start_##name
-#define AUTOSEG_STOP(name) __stop_##name
-#define AUTOSEG_VARIABLE(name, autoseg) \
-	void* name##DummyPointer __attribute__((section(AUTOSEG_STR(autoseg)))) __attribute__((used)); \
-	extern void* AUTOSEG_START(autoseg); \
-	extern void* AUTOSEG_STOP(autoseg); \
-	namespace AutoSegs { FAutoSeg name{ &AUTOSEG_START(autoseg), &AUTOSEG_STOP(autoseg) }; }
-
-#endif
-
-AUTOSEG_VARIABLE(ActionFunctons, AUTOSEG_AREG)
-AUTOSEG_VARIABLE(TypeInfos, AUTOSEG_CREG)
-AUTOSEG_VARIABLE(ClassFields, AUTOSEG_FREG)
-AUTOSEG_VARIABLE(Properties, AUTOSEG_GREG)
-AUTOSEG_VARIABLE(MapInfoOptions, AUTOSEG_YREG)
-AUTOSEG_VARIABLE(CVarDecl, AUTOSEG_VREG)
-
-#undef AUTOSEG_VARIABLE
-#undef AUTOSEG_STOP
-#undef AUTOSEG_START
-
-
-void FAutoSeg::Initialize()
-{
-#ifdef _WIN32
-
-	const HMODULE selfModule = GetModuleHandle(nullptr);
-	const SIZE_T baseAddress = reinterpret_cast<SIZE_T>(selfModule);
-
-	const PIMAGE_NT_HEADERS header = ImageNtHeader(selfModule);
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(header);
-
-	for (WORD i = 0; i < header->FileHeader.NumberOfSections; ++i, ++section)
-	{
-		if (strncmp(reinterpret_cast<char *>(section->Name), name, IMAGE_SIZEOF_SHORT_NAME) == 0)
-		{
-			begin = reinterpret_cast<void **>(baseAddress + section->VirtualAddress);
-			end = reinterpret_cast<void **>(baseAddress + section->VirtualAddress + section->SizeOfRawData);
-			break;
-		}
-	}
-
-#elif defined __MACH__
-
-	unsigned long size;
-
-	if (uint8_t *const section = getsectiondata(&_mh_execute_header, AUTOSEG_MACH_SEGMENT, name, &size))
-	{
-		begin = reinterpret_cast<void **>(section);
-		end = reinterpret_cast<void **>(section + size);
-	}
-
-#else // Linux and others with ELF executables
-
-	assert(false);
-
-#endif
-}
-
-
-#if defined(_MSC_VER)
-
-// We want visual styles support under XP
-#if defined _M_IX86
-
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
-
-#elif defined _M_IA64
-
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
-
-#elif defined _M_X64
-
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
-
-#else
-
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
-
-#endif
-
-#endif
+FAutoSeg<AFuncDesc> AutoSegs::ActionFunctons;
+FAutoSeg<FieldDesc> AutoSegs::ClassFields;
+FAutoSeg<ClassReg> AutoSegs::TypeInfos;
+FAutoSeg<FPropertyInfo> AutoSegs::Properties;
+FAutoSeg<FMapOptInfo> AutoSegs::MapInfoOptions;
+FAutoSeg<FCVarDecl> AutoSegs::CVarDecl;

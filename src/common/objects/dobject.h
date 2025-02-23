@@ -92,7 +92,7 @@ class PClassActor;
 #define NATIVE_TYPE(object)			(object->StaticType())			// Passed an object, returns the type of the C++ class representing the object
 
 // Enumerations for the meta classes created by ClassReg::RegisterClass()
-struct ClassReg
+struct ClassReg : FAutoSegEntry<ClassReg>
 {
 	PClass *MyClass;
 	const char *Name;
@@ -102,6 +102,9 @@ struct ClassReg
 	void (*ConstructNative)(void *);
 	void(*InitNatives)();
 	unsigned int SizeOf;
+
+	ClassReg(PClass *mc, const char * nm, ClassReg * pt, ClassReg *vm, const size_t * ps, void (*cn)(void *), void(*in)(), unsigned int so)
+	: FAutoSegEntry(AutoSegs::TypeInfos, this), MyClass(mc), Name(nm), ParentType(pt), _VMExport(vm), Pointers(ps), ConstructNative(cn), InitNatives(in), SizeOf(so) {}
 
 	PClass *RegisterClass();
 	void SetupClass(PClass *cls);
@@ -134,13 +137,6 @@ public: \
 #define HAS_OBJECT_POINTERS \
 	static const size_t PointerOffsets[];
 
-#if defined(_MSC_VER)
-#	pragma section(SECTION_CREG,read)
-#	define _DECLARE_TI(cls) __declspec(allocate(SECTION_CREG)) ClassReg * const cls::RegistrationInfoPtr = &cls::RegistrationInfo;
-#else
-#	define _DECLARE_TI(cls) ClassReg * const cls::RegistrationInfoPtr __attribute__((section(SECTION_CREG))) = &cls::RegistrationInfo;
-#endif
-
 #define _IMP_PCLASS(cls, ptrs, create) \
 	ClassReg cls::RegistrationInfo = {\
 		nullptr, \
@@ -151,7 +147,6 @@ public: \
 		create, \
 		nullptr, \
 		sizeof(cls) }; \
-	_DECLARE_TI(cls) \
 	PClass *cls::StaticType() const { return RegistrationInfo.MyClass; }
 
 #define IMPLEMENT_CLASS(cls, isabstract, ptrs) \

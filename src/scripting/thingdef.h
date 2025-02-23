@@ -244,17 +244,6 @@ enum EDefinitionType
 	DEF_Projectile,
 };
 
-#if defined(_MSC_VER)
-#pragma section(SECTION_GREG,read)
-
-#define MSVC_PSEG __declspec(allocate(SECTION_GREG))
-#define GCC_PSEG
-#else
-#define MSVC_PSEG
-#define GCC_PSEG __attribute__((section(SECTION_GREG))) __attribute__((used))
-#endif
-
-
 union FPropParam
 {
 	int i;
@@ -272,13 +261,17 @@ enum ECategory
 	CAT_INFO		// non-inheritable info (spawn ID, Doomednum, game filter, conversation ID, not usable in ZScript)
 };
 
-struct FPropertyInfo
+struct FPropertyInfo : FAutoSegEntry<FPropertyInfo>
 {
 	const char *name;
 	const char *params;
 	const char *clsname;
 	PropHandler Handler;
 	int category;
+	
+	FPropertyInfo(const char * n, const char * p, const char * cn, PropHandler h, int c)
+	: FAutoSegEntry(AutoSegs::Properties, this), name(n), params(p), clsname(cn), Handler(h), category(c) {}
+
 };
 
 FPropertyInfo *FindProperty(const char * string);
@@ -289,21 +282,18 @@ int MatchString (const char *in, const char **strings);
 	static void Handler_##name##_##paramlist##_##clas(A##clas *defaults, PClassActor *info, Baggage &bag, FPropParam *params); \
 	static FPropertyInfo Prop_##name##_##paramlist##_##clas = \
 		{ #name, #paramlist, #clas, (PropHandler)Handler_##name##_##paramlist##_##clas, cat }; \
-	MSVC_PSEG FPropertyInfo *infoptr_##name##_##paramlist##_##clas GCC_PSEG = &Prop_##name##_##paramlist##_##clas; \
 	static void Handler_##name##_##paramlist##_##clas(A##clas *defaults, PClassActor *info, Baggage &bag, FPropParam *params)
 
 #define DEFINE_PREFIXED_PROPERTY_BASE(prefix, name, paramlist, clas, cat) \
 	static void Handler_##name##_##paramlist##_##clas(A##clas *defaults, PClassActor *info, Baggage &bag, FPropParam *params); \
 	static FPropertyInfo Prop_##name##_##paramlist##_##clas = \
 { #prefix"."#name, #paramlist, #clas, (PropHandler)Handler_##name##_##paramlist##_##clas, cat }; \
-	MSVC_PSEG FPropertyInfo *infoptr_##name##_##paramlist##_##clas GCC_PSEG = &Prop_##name##_##paramlist##_##clas; \
 	static void Handler_##name##_##paramlist##_##clas(A##clas *defaults, PClassActor *info, Baggage &bag, FPropParam *params)
 
 #define DEFINE_PREFIXED_SCRIPTED_PROPERTY_BASE(prefix, name, paramlist, clas, cat) \
 	static void Handler_##name##_##paramlist##_##clas(AActor *defaults, PClassActor *info, Baggage &bag, FPropParam *params); \
 	static FPropertyInfo Prop_##name##_##paramlist##_##clas = \
 { #prefix"."#name, #paramlist, #clas, (PropHandler)Handler_##name##_##paramlist##_##clas, cat }; \
-	MSVC_PSEG FPropertyInfo *infoptr_##name##_##paramlist##_##clas GCC_PSEG = &Prop_##name##_##paramlist##_##clas; \
 	static void Handler_##name##_##paramlist##_##clas(AActor *defaults, PClassActor *info, Baggage &bag, FPropParam *params)
 
 
